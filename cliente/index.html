@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebGL2 - Dois cubos em rede</title>
+  <link rel="stylesheet" href="./estilos.css">
+</head>
+<body>
+  <main>
+    <h1>Dois cubos, dois clientes, um servidor</h1>
+    <p>W/A/S/D movimentam apenas seu cubo.</p>
+    <div class="painel">
+      <span id="situacao">Conectando...</span>
+      <span id="identidade">Aguardando identificador</span>
+      <span id="quantidade">0/2 jogadores</span>
+    </div>
+    <canvas id="jogo" width="960" height="600" aria-label="Arena tridimensional"></canvas>
+  </main>
+  <script type="module" src="./principal.js"></script>
+</body>
+</html>
