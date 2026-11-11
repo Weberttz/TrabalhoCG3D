@@ -1,0 +1,16 @@
+{
+    "name": "webgl2-dois-cubos-codigo-portugues",
+    "version": "1.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+    "start": "node servidor/servidor.js",
+    "test": "node --test"
+    },
+    "dependencies": {
+    "ws": "^8.18.0"
+    },
+    "engines": {
+    "node": ">=20"
+    }
+}
