@@ -53,3 +53,22 @@ canvas {
 .dica {
     font-size: 14px;
 }
+
+.area-jogo {
+    position: relative;
+}
+
+.area-jogo canvas {
+    display: block;
+}
+
+.mira {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    color: white;
+    font: bold 25px sans-serif;
+    text-shadow: 0 1px 4px black;
+}

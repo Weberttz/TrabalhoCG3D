@@ -41,6 +41,7 @@ export class Jogo {
       instanteUltimaEntrada: agora,
       inicioJanelaTaxa: agora,
       contagemEntradas: 0,
+      anguloHorizontal: 0,
     };
 
     this.jogadores.set(jogador.id, jogador);
@@ -58,8 +59,13 @@ export class Jogo {
     if (!jogador || !mensagem || typeof mensagem !== 'object' ||
         Array.isArray(mensagem)) return false;
 
-    // O pacote deve possuir: tipo, sequencia e teclas
-    if (Object.keys(mensagem).length !== 3 ||
+    // O pacote deve possuir: tipo, sequencia, teclas e anguloHorizontal
+    if (Object.keys(mensagem).length !== 4 ||
+        !Object.hasOwn(mensagem, 'anguloHorizontal') ||
+        typeof mensagem.anguloHorizontal !== 'number' ||
+        !Number.isFinite(mensagem.anguloHorizontal) ||
+        mensagem.anguloHorizontal < -Math.PI ||
+        mensagem.anguloHorizontal > Math.PI ||
         mensagem.tipo !== 'entrada' ||
         !Number.isSafeInteger(mensagem.sequencia) ||
         mensagem.sequencia <= jogador.ultimaSequencia) return false;
@@ -85,6 +91,7 @@ export class Jogo {
     jogador.ultimaSequencia = mensagem.sequencia;
     jogador.instanteUltimaEntrada = agora;
     jogador.teclas = { ...teclas };
+    jogador.anguloHorizontal = mensagem.anguloHorizontal;
     return true;
   }
 
@@ -118,8 +125,11 @@ export class Jogo {
       const teclas = agora - jogador.instanteUltimaEntrada <=
         CONFIGURACAO.tempoLimiteEntradaMs ? jogador.teclas : TECLAS_SOLTAS;
 
-      let direcaoX = Number(teclas.d) - Number(teclas.a);
-      let direcaoZ = Number(teclas.s) - Number(teclas.w);
+      const lateral = Number(teclas.d) - Number(teclas.a);
+      const frente = Number(teclas.w) - Number(teclas.s);
+      const angulo = jogador.anguloHorizontal;
+      let direcaoX = lateral * Math.cos(angulo) + frente * Math.sin(angulo);
+      let direcaoZ = lateral * Math.sin(angulo) - frente * Math.cos(angulo);
       const comprimento = Math.hypot(direcaoX, direcaoZ);
       if (comprimento === 0) continue;
 

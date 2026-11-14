@@ -16,6 +16,7 @@ const ARQUIVOS_PUBLICOS = new Map([
   ['/rede.js', ['../cliente/rede.js', 'text/javascript; charset=utf-8']],
   ['/renderizador.js', ['../cliente/renderizador.js', 'text/javascript; charset=utf-8']],
   ['/mapa.js', ['../compartilhado/mapa.js', 'text/javascript; charset=utf-8']],
+  ['/mouse.js', ['../cliente/mouse.js', 'text/javascript; charset=utf-8']],
 ]);
 
 const servidorHttp = createServer((requisicao, resposta) => {

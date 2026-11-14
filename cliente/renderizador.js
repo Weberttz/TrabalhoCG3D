@@ -145,7 +145,7 @@ export function criarRenderizador(canvas) {
   }
 
   return {
-    desenhar(jogadores, meuId) {
+    desenhar(jogadores, meuId, orientacao) {
       const escalaTela = Math.min(window.devicePixelRatio || 1, 2);
       const largura = Math.floor(canvas.clientWidth * escalaTela);
       const altura = Math.floor(canvas.clientHeight * escalaTela);
@@ -161,10 +161,17 @@ export function criarRenderizador(canvas) {
       const projecao = perspectiva(Math.PI / 4,
         canvas.width / canvas.height, 0.1, 100);
       const meuJogador = jogadores.find(jogador => jogador.id === meuId);
-      // Primeira pessoa: câmera está na posição do cubo local e olha para -Z.
-      // Nesta versão o mouse ainda não gira a câmera.
       const olho = meuJogador ? [meuJogador.x, 0.65, meuJogador.z] : [0, 2, 3];
-      const alvo = [olho[0], olho[1], olho[2] - 1];
+      const { anguloHorizontal, anguloVertical } = orientacao;
+      // limitar o yaw e o pitch
+      const cosVertical = Math.cos(anguloVertical);
+
+      // olha + direção produz um alvo da câmera em primeira pessoa
+      const alvo = [
+        olho[0] + Math.sin(anguloHorizontal) * cosVertical,
+        olho[1] + Math.sin(anguloVertical),
+        olho[2] - Math.cos(anguloHorizontal) * cosVertical,
+      ];
       const camera = multiplicar(projecao, olharPara(olho, alvo));
       for (const objeto of objetos) {
         const modelo = modeloCaixa(objeto.x, objeto.y, objeto.z,

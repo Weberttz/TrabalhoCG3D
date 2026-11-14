@@ -31,9 +31,15 @@ conexao.addEventListener('message', evento => {
   }
 });
 
-export function enviarTeclas(teclas) {
+export function enviarTeclas(teclas, anguloHorizontal) {
   if (conexao.readyState !== WebSocket.OPEN || meuId === null) return;
-  conexao.send(JSON.stringify({ tipo: 'entrada', sequencia: sequencia++, teclas }));
+  conexao.send(JSON.stringify({ 
+    tipo: 'entrada', 
+    sequencia: 
+    sequencia++, 
+    teclas,
+    anguloHorizontal 
+  }));
 }
 
 export function obterSessao() {
