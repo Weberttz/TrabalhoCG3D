@@ -1,3 +1,4 @@
+import { COLISORES_QUARTO } from '../compartilhado/mapa.js';
 // O servidor é a fonte de verdade das posições e das colisões.
 export const CONFIGURACAO = Object.freeze({
   maximoJogadores: 2,
@@ -94,6 +95,16 @@ export class Jogo {
       if (Math.abs(x - outro.x) < CONFIGURACAO.tamanhoCubo &&
           Math.abs(z - outro.z) < CONFIGURACAO.tamanhoCubo) return false;
     }
+
+    const raio = CONFIGURACAO.tamanhoCubo / 2;
+    for (const objeto of COLISORES_QUARTO) {
+      if (Math.abs(x - objeto.x) <
+        raio + objeto.largura / 2 &&
+        Math.abs(z - objeto.z) <
+        raio + objeto.profundidade / 2) {
+        return false;
+        }
+      }
     return true;
   }
 
