@@ -1,4 +1,5 @@
 import { COLISORES_QUARTO } from '../compartilhado/mapa.js';
+import { TaskProximidade } from './tasks/TaskProximidade.js';
 // O servidor é a fonte de verdade das posições e das colisões.
 export const CONFIGURACAO = Object.freeze({
   maximoJogadores: 2,
@@ -45,6 +46,22 @@ export class Jogo {
     };
 
     this.jogadores.set(jogador.id, jogador);
+    
+    const taskId = `task_energia_${jogador.id}`;
+    const posX = jogador.cubo === 0 ? -4 : 4;
+    const posZ = 3;
+
+    this.tasks.set(
+      taskId,
+      new TaskProximidade({
+        id: taskId,
+        jogadorId: jogador.id,
+        x: posX,
+        z: posZ,
+        tempoNecessario: 3,
+      })
+    );
+    console.log(`[Jogo] Task "${taskId}" criada para Jogador ${jogador.id} em (${posX}, ${posZ})`);
     return jogador;
   }
 
