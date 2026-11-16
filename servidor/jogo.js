@@ -20,6 +20,7 @@ export class Jogo {
     this.jogadores = new Map();
     this.proximoId = 1;
     this.passo = 0;
+    this.tasks = new Map();
   }
 
   adicionarJogador(conexao) {
@@ -49,6 +50,11 @@ export class Jogo {
 
   removerJogador(id) {
     this.jogadores.delete(id);
+    for (const [taskId, task] of this.tasks.entries()) {
+      if (task.jogadorId === id) {
+        this.tasks.delete(taskId);
+      }
+    }
     this.proximoId--;
   }
 
@@ -86,6 +92,16 @@ export class Jogo {
     jogador.instanteUltimaEntrada = agora;
     jogador.teclas = { ...teclas };
     return true;
+  }
+
+  receberAcaoTask(jogadorId, mensagem) {
+    const jogador = this.jogadores.get(jogadorId);
+    if (!jogador || !mensagem || typeof mensagem.taskId !== 'string') return false;
+
+    const task = this.tasks.get(mensagem.taskId);
+    if (!task) return false;
+
+    return task.processarAcao(jogador, mensagem);
   }
 
   podeOcupar(jogador, x, z) {
@@ -135,6 +151,10 @@ export class Jogo {
       if (this.podeOcupar(jogador, novoX, jogador.z)) jogador.x = novoX;
       if (this.podeOcupar(jogador, jogador.x, novoZ)) jogador.z = novoZ;
     }
+    for (const task of this.tasks.values()) {
+      const dono = task.jogadorId !== null ? this.jogadores.get(task.jogadorId) : null;
+      task.atualizar(tempoDecorrido, dono);
+    }
     this.passo++;
   }
 
@@ -148,6 +168,7 @@ export class Jogo {
         x: Number(x.toFixed(4)),
         z: Number(z.toFixed(4)),
       })),
+      tasks: [...this.tasks.values()].map(task => task.serializar()),
     };
   }
 }
