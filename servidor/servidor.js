@@ -17,6 +17,7 @@ const ARQUIVOS_PUBLICOS = new Map([
   ['/renderizador.js', ['../cliente/renderizador.js', 'text/javascript; charset=utf-8']],
   ['/mapa.js', ['../compartilhado/mapa.js', 'text/javascript; charset=utf-8']],
   ['/mouse.js', ['../cliente/mouse.js', 'text/javascript; charset=utf-8']],
+  ['/constantesTasks.js', ['../compartilhado/constantesTasks.js', 'text/javascript; charset=utf-8']],
 ]);
 
 const servidorHttp = createServer((requisicao, resposta) => {
@@ -67,7 +68,13 @@ servidorWebSocket.on('connection', conexao => {
 
   conexao.on('message', dadosRecebidos => {
     try {
-      jogo.receberEntrada(jogador.id, JSON.parse(dadosRecebidos.toString()));
+      const mensagem = JSON.parse(dadosRecebidos.toString());
+
+      if (mensagem?.tipo === 'entrada') {
+        jogo.receberEntrada(jogador.id, mensagem);
+      } else if (mensagem?.tipo === 'acao_task') {
+        jogo.receberAcaoTask(jogador.id, mensagem);
+      }
     } catch {
       // Um pacote inválido não deve derrubar o servidor.
     }
