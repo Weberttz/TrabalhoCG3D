@@ -1,4 +1,4 @@
-import { OBJETOS_QUARTO } from '/mapa.js';
+import { OBJETOS_QUARTO } from '../compartilhado/mapa.js';
 const SHADER_VERTICE = `#version 300 es
 in vec3 aPosicao;
 uniform mat4 uMatrizMVP;
@@ -113,7 +113,7 @@ function modeloCaixa(x, y, z, largura, altura, profundidade) {
   ]);
 }
 
-export function criarRenderizador(canvas) {
+export function criarRenderizador(canvas, modelos = {}) {
   const gl = canvas.getContext('webgl2', { antialias: true });
   if (!gl) throw new Error('WebGL2 não disponível neste navegador');
 
@@ -130,6 +130,17 @@ export function criarRenderizador(canvas) {
   }
 
   const cubo = enviarVertices(verticesCubo());
+
+  const buffersOBJ = {}
+
+  for (const chave in modelos) {
+    const modelo = modelos[chave]
+    
+    if (modelo && modelo.posicoes && modelo.posicoes.length > 0){
+      buffersOBJ[chave] = enviarVertices(modelo.posicoes)
+    }
+  }
+
   // Geometria e cores do quarto são importadas, não ficam espalhadas aqui.
   const objetos = OBJETOS_QUARTO;
   gl.useProgram(programa);
@@ -173,10 +184,23 @@ export function criarRenderizador(canvas) {
         olho[2] - Math.cos(anguloHorizontal) * cosVertical,
       ];
       const camera = multiplicar(projecao, olharPara(olho, alvo));
+
       for (const objeto of objetos) {
-        const modelo = modeloCaixa(objeto.x, objeto.y, objeto.z,
+        const malhaOBJ = buffersOBJ[objeto.modelo]
+
+        if(malhaOBJ) {
+            const modelo = translacao(
+            objeto.x - 29.5,
+            objeto.y,
+            objeto.z - 8
+            );
+
+            desenharMalha(malhaOBJ, gl.TRIANGLES, multiplicar(camera, modelo), objeto.cor);
+        } else {
+          const modelo = modeloCaixa(objeto.x, objeto.y, objeto.z,
           objeto.largura, objeto.altura, objeto.profundidade);
-        desenharMalha(cubo, gl.TRIANGLES, multiplicar(camera, modelo), objeto.cor);
+          desenharMalha(cubo, gl.TRIANGLES, multiplicar(camera, modelo), objeto.cor);
+        }
       }
 
       for (const jogador of jogadores) {
