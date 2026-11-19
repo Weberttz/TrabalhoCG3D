@@ -1,4 +1,4 @@
-import { OBJETOS_QUARTO } from '../compartilhado/mapa.js';
+import { OBJETOS_QUARTO } from './mapa.js';
 const SHADER_VERTICE = `#version 300 es
 in vec3 aPosicao;
 uniform mat4 uMatrizMVP;
@@ -190,9 +190,9 @@ export function criarRenderizador(canvas, modelos = {}) {
 
         if(malhaOBJ) {
             const modelo = translacao(
-            objeto.x - 29.5,
+            objeto.x,
             objeto.y,
-            objeto.z - 8
+            objeto.z
             );
 
             desenharMalha(malhaOBJ, gl.TRIANGLES, multiplicar(camera, modelo), objeto.cor);
