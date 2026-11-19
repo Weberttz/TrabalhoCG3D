@@ -1,44 +1,159 @@
+import path from 'node:path';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs';
+import { createReadStream } from 'node:fs';
+import { stat, realpath } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { Jogo, CONFIGURACAO } from './jogo.js';
+import { carregarColisoesOBJ  } from './colisaoOBJ.js';
 
 const PORTA = Number(process.env.PORT || 3000);
 const jogo = new Jogo();
+await jogo.inicializar();
 
-// Só estes caminhos podem ser servidos por HTTP.
-const ARQUIVOS_PUBLICOS = new Map([
-  ['/', ['../cliente/index.html', 'text/html; charset=utf-8']],
-  ['/estilos.css', ['../cliente/estilos.css', 'text/css; charset=utf-8']],
-  ['/principal.js', ['../cliente/principal.js', 'text/javascript; charset=utf-8']],
-  ['/teclado.js', ['../cliente/teclado.js', 'text/javascript; charset=utf-8']],
-  ['/rede.js', ['../cliente/rede.js', 'text/javascript; charset=utf-8']],
-  ['/renderizador.js', ['../cliente/renderizador.js', 'text/javascript; charset=utf-8']],
-  ['/mapa.js', ['../compartilhado/mapa.js', 'text/javascript; charset=utf-8']],
-  ['/mouse.js', ['../cliente/mouse.js', 'text/javascript; charset=utf-8']],
-  ['/constantesTasks.js', ['../compartilhado/constantesTasks.js', 'text/javascript; charset=utf-8']],
-]);
+const DIRETORIO_ATUAL = path.dirname(
+  fileURLToPath(import.meta.url)
+);
 
-const servidorHttp = createServer((requisicao, resposta) => {
-  const caminho = new URL(requisicao.url, 'http://localhost').pathname;
-  const arquivo = requisicao.method === 'GET' ? ARQUIVOS_PUBLICOS.get(caminho) : null;
-  if (!arquivo) {
-    resposta.writeHead(404).end('Não encontrado');
-    return;
+const DIRETORIOS_PUBLICOS = {
+  '/cliente': path.resolve(DIRETORIO_ATUAL, '../cliente'),
+  '/compartilhado': path.resolve(DIRETORIO_ATUAL, '../compartilhado')
+};
+
+const DIRETORIOS_REAIS = await Promise.all(
+  Object.values(DIRETORIOS_PUBLICOS).map(
+    diretorio => realpath(diretorio)
+  )
+);
+
+const TIPOS_ARQUIVOS = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.obj': 'text/plain; charset=utf-8',
+  '.mtl': 'text/plain; charset=utf-8',
+  '.glsl': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.json': 'application/json; charset=utf-8'
+};
+
+// O servidor consegue localizar os arquivos compartilhados e de cliente
+function localizarArquivo(url) {
+  const caminhoURL = decodeURIComponent(
+    new URL(url, 'http://localhost').pathname
+  );
+
+  if (caminhoURL === '/') {
+    return path.join(DIRETORIOS_PUBLICOS['/cliente'], 'index.html');
   }
 
-  const [caminhoRelativo, tipoConteudo] = arquivo;
-  readFile(fileURLToPath(new URL(caminhoRelativo, import.meta.url)),
-    (erro, conteudo) => {
-      if (erro) {
-        resposta.writeHead(500).end('Erro ao carregar arquivo');
-        return;
-      }
-      resposta.writeHead(200, { 'Content-Type': tipoConteudo });
-      resposta.end(conteudo);
+  // Arquivos compartilhados mantêm suas URLs antigas
+  const compartilhados = [
+    'mapa.js',
+    'constantesTasks.js',
+    'estruturaPredio.js'
+  ];
+
+  if (compartilhados.includes(caminhoURL.slice(1))) {
+    return path.join(
+      DIRETORIOS_PUBLICOS['/compartilhado'],
+      caminhoURL.slice(1)
+    );
+  }
+
+  // Todo o restante é procurado na pasta cliente
+  const relativo = caminhoURL.replace(/^\/+/, '');
+  const partes = relativo.split('/');
+
+  if (partes.includes('..') || partes.includes('.')) {
+    return null;
+  }
+
+  const diretorio = DIRETORIOS_PUBLICOS['/cliente'];
+  const arquivo = path.resolve(diretorio, relativo);
+
+  if (!arquivo.startsWith(diretorio + path.sep)) {
+    return null;
+  }
+
+  return arquivo;
+}
+// O sevidor busca os arquivos, verifica permissão e retorna as respostas
+async function servirArquivo(requisicao, resposta) {
+  if (!['GET', 'HEAD'].includes(requisicao.method)) {
+    resposta.writeHead(405, { Allow: 'GET, HEAD' });
+    return resposta.end();
+  }
+
+  let arquivo;
+
+  try {
+    arquivo = localizarArquivo(requisicao.url);
+  } catch {
+    resposta.writeHead(400);
+    return resposta.end('URL inválida');
+  }
+
+  if (!arquivo) {
+    resposta.writeHead(404);
+    return resposta.end('Arquivo não encontrado');
+  }
+
+  const extensao = path.extname(arquivo).toLowerCase();
+  const tipo = TIPOS_ARQUIVOS[extensao];
+
+  if (!tipo) {
+    resposta.writeHead(403);
+    return resposta.end('Tipo não permitido');
+  }
+
+  try {
+    // Verifica também links simbólicos.
+    const arquivoReal = await realpath(arquivo);
+
+    const diretorioPermitido = DIRETORIOS_REAIS.some(
+      diretorio =>
+        arquivoReal.startsWith(diretorio + path.sep)
+    );
+
+    if (!diretorioPermitido) {
+      resposta.writeHead(403);
+      return resposta.end('Acesso negado');
+    }
+
+    const informacoes = await stat(arquivoReal);
+
+    if (!informacoes.isFile()) {
+      resposta.writeHead(404);
+      return resposta.end();
+    }
+
+    resposta.writeHead(200, {
+      'Content-Type': tipo,
+      'Content-Length': informacoes.size,
+      'X-Content-Type-Options': 'nosniff'
     });
-});
+
+    if (requisicao.method === 'HEAD') {
+      return resposta.end();
+    }
+
+    createReadStream(arquivoReal).pipe(resposta);
+
+  } catch {
+    if (!resposta.headersSent) {
+      resposta.writeHead(404);
+      resposta.end('Arquivo não encontrado');
+    } else {
+      resposta.destroy();
+    }
+  }
+}
+
+const servidorHttp = createServer(servirArquivo);
 
 const servidorWebSocket = new WebSocketServer({
   server: servidorHttp,
