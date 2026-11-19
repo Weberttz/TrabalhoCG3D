@@ -1,3 +1,4 @@
+import { OBJETOS_QUARTO } from './mapa.js';
 import { lerTeclas } from "./teclado.js";
 import { enviarTeclas, obterSessao } from "./rede.js";
 import { criarRenderizador } from "./renderizador.js";
@@ -6,15 +7,36 @@ import { leitorOBJ } from "./leitorOBJ.js";
 
 //carrega os modelos obj antes de iniciar a renderizacao
 async function carregarModelos() {
-  const modelos = {};
-  try {
-    modelos["SalaGenerica.obj"] = await leitorOBJ.carregarArquivo("./modelosOBJ/SalaGenerica.obj");
+    const modelos = {};
 
-    } catch (erro) {
-    console.error("Não foi possivel carregar o modelo obj: ", erro);
-  }
+    // Obtém os nomes dos modelos, sem duplicatas.
+    const nomesModelos = [
+        ...new Set(
+            OBJETOS_QUARTO
+                .filter(objeto => objeto.modelo)
+                .map(objeto => objeto.modelo)
+        )
+    ];
 
-  return modelos;
+    // Carrega os modelos em paralelo.
+    await Promise.all(
+        nomesModelos.map(async nome => {
+            try {
+                modelos[nome] = await leitorOBJ.carregarArquivo(
+                    `./modelosOBJ/${nome}`
+                );
+
+                console.log(`[Renderer] Modelo carregado: ${nome}`);
+            } catch (erro) {
+                console.error(
+                    `[Renderer] Erro ao carregar ${nome}:`,
+                    erro
+                );
+            }
+        })
+    );
+
+    return modelos;
 }
 
 async function iniciarJogo() {
