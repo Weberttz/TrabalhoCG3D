@@ -1,21 +1,15 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
 import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
+import { Predio } from '../compartilhado/estruturaPredio.js';
+import { OBJETOS_QUARTO } from '../compartilhado/mapa.js';
 
-// Diretório do arquivo atual.
 const DIRETORIO_ATUAL = path.dirname(
     fileURLToPath(import.meta.url)
 );
 
-// Caminho absoluto do modelo OBJ.
-const CAMINHO_OBJ = path.resolve(
-    DIRETORIO_ATUAL,
-    '../cliente/modelosOBJ/SalaGenerica.obj'
-);
-
-// Configurações oficiais do servidor.
+// Configurações do jogo.
 export const CONFIGURACAO = Object.freeze({
     maximoJogadores: 2,
 
@@ -23,21 +17,12 @@ export const CONFIGURACAO = Object.freeze({
     estadosPorSegundo: 15,
 
     velocidade: 3,
-
     tamanhoCubo: 0.8,
 
     tempoLimiteEntradaMs: 250,
     maximoEntradasPorSegundo: 30,
 
-    distanciaMaximaPasso: 0.05,
-
-    // Limites internos da sala mostrada no OBJ.
-    limitesSala: Object.freeze({
-        minimoX: 26.4,
-        maximoX: 32.6,
-        minimoZ: 4.4,
-        maximoZ: 11.6
-    })
+    distanciaMaximaPasso: 0.05
 });
 
 const TECLAS_PERMITIDAS = ['w', 'a', 's', 'd'];
@@ -53,7 +38,6 @@ const limitar = (valor, minimo, maximo) =>
     Math.max(minimo, Math.min(maximo, valor));
 
 export class Jogo {
-
     constructor() {
         this.jogadores = new Map();
         this.proximoId = 1;
@@ -61,30 +45,91 @@ export class Jogo {
 
         this.tasks = new Map();
 
-        // Será carregado durante a inicialização.
-        this.colisoes = null;
+        this.predio = new Predio('CCT');
+
+        const andar = this.predio.criarAndar('Andar00');
+
+        this.sala = andar.criarSala('Sala002');
+
+        // Cache de geometrias OBJ.
+        this.modelosColisao = new Map();
+
+        this.inicializado = false;
     }
-
-    // ==========================================
-    // INICIALIZAÇÃO DAS COLISÕES
-    // ==========================================
-
+ 
+    // Inicialização do cenário
     async inicializar() {
-        this.colisoes = await carregarColisoesOBJ(
-            CAMINHO_OBJ
-        );
+        for (const [indice, descricao] of OBJETOS_QUARTO.entries()) {
+            if (!descricao.modelo) continue;
 
-        for(const colisao of this.colisoes.colisores){
-          console.log(colisao.nome)
+            // A geometria da sala possui paredes
+            // com colisão mesmo se solido=false.
+            const temColisao =
+                descricao.solido === true ||
+                descricao.modelo === 'SalaGenerica.obj';
+
+            // Garante nome único para cada instância.
+            const nomeInstancia = `${descricao.nome}_${indice}`;
+
+            const objeto = this.sala.criarObjeto(
+                nomeInstancia,
+                descricao.modelo,
+                temColisao
+            );
+
+            objeto.posicao = {
+                x: descricao.x ?? 0,
+                y: descricao.y ?? 0,
+                z: descricao.z ?? 0
+            };
+
+            objeto.rotacaoY = descricao.rotacaoY ?? 0;
+
+            if (!temColisao) {
+                continue;
+            }
+
+            if (!this.modelosColisao.has(descricao.modelo)) {
+                const caminho = path.resolve(
+                    DIRETORIO_ATUAL,
+                    '../cliente/modelosOBJ',
+                    descricao.modelo
+                );
+
+                const geometria = await carregarColisoesOBJ(caminho);
+
+                this.modelosColisao.set(
+                    descricao.modelo,
+                    geometria
+                );
+            }
+
+            const geometria = this.modelosColisao.get(
+                descricao.modelo
+            );
+
+            objeto.aabb = geometria.colisores;
+            objeto.colisaoOBJ = geometria;
+
+            console.log(
+                `[Jogo] ${nomeInstancia}: ` +
+                `${geometria.totalColisores} colisores`
+            );
         }
-    }
 
-    // ==========================================
-    // ADICIONAR JOGADOR
-    // ==========================================
+        this.inicializado = true;
+
+        console.log('[Jogo] Prédio inicializado.');
+        console.log(
+            '[Jogo] Objetos registrados:',
+            Object.keys(this.sala.objetos)
+        );
+    }
 
     adicionarJogador(conexao) {
-        if (!this.colisoes) return null;
+        if (!this.inicializado) {
+            return null;
+        }
 
         if (
             this.jogadores.size >=
@@ -100,21 +145,37 @@ export class Jogo {
         );
 
         const cubo = cubosOcupados.has(0) ? 1 : 0;
-
         const agora = Date.now();
 
-        // Posições dentro da sala original.
-        const xInicial = cubo === 0 ? 28.5 : 30.5;
-        const zInicial = 8;
+        const posicoesIniciais = [
+            { x: 28.5, y: 0, z: 8 },
+            { x: 30.5, y: 0, z: 8 },
+            { x: 29.5, y: 0, z: 6 },
+            { x: 29.5, y: 0, z: 10 }
+        ];
 
+        const posicao = posicoesIniciais.find(posicao =>
+            this.podeOcupar(
+                { id: -1, y: posicao.y, andar: 'Andar00', sala: 'Sala002' },
+                posicao.x,
+                posicao.z
+            )
+        );
+
+        if (!posicao) {
+            console.warn('[Jogo] Nenhuma posição inicial disponível.');
+            return null;
+        }
+
+        // Posições livres no interior de SalaGenerica.obj.
         const jogador = {
             id: this.proximoId++,
             cubo,
             conexao,
-
-            x: xInicial,
-            y: 0,
-            z: zInicial,
+            
+            x: posicao.x,
+            y: posicao.y,
+            z: posicao.z,
 
             teclas: { ...TECLAS_SOLTAS },
 
@@ -124,57 +185,38 @@ export class Jogo {
             inicioJanelaTaxa: agora,
             contagemEntradas: 0,
 
-            anguloHorizontal: 0
+            anguloHorizontal: 0,
+
+            // Localização na estrutura do prédio.
+            andar: 'Andar00',
+            sala: 'Sala002'
         };
-
-        // Não permite nascer dentro de obstáculos.
-        if (!this.podeOcupar(
-            jogador,
-            jogador.x,
-            jogador.z
-        )) {
-            console.error(
-                '[Jogo] Posição inicial bloqueada:',
-                jogador.x,
-                jogador.z
-            );
-
-            return null;
-        }
 
         this.jogadores.set(jogador.id, jogador);
 
-        // ======================================
-        // TASK DO JOGADOR
-        // ======================================
-
+        // Uma task para cada jogador.
         const taskId = `task_energia_${jogador.id}`;
-
-        const posX = cubo === 0 ? 28 : 31;
-        const posZ = 10;
 
         this.tasks.set(
             taskId,
             new TaskProximidade({
                 id: taskId,
                 jogadorId: jogador.id,
-                x: posX,
-                z: posZ,
+
+                x: cubo === 0 ? 28 : 31,
+                z: 10,
+
                 tempoNecessario: 3
             })
         );
 
         console.log(
-            `[Jogo] Jogador ${jogador.id} criado em ` +
+            `[Jogo] Jogador ${jogador.id} conectado em ` +
             `(${jogador.x}, ${jogador.z})`
         );
 
         return jogador;
     }
-
-    // ==========================================
-    // REMOVER JOGADOR
-    // ==========================================
 
     removerJogador(id) {
         this.jogadores.delete(id);
@@ -184,14 +226,9 @@ export class Jogo {
                 this.tasks.delete(taskId);
             }
         }
-
-        // Não diminuímos proximoId:
-        // os IDs devem continuar únicos.
     }
 
-    // ==========================================
-    // RECEBER ENTRADA DO CLIENTE
-    // ==========================================
+    // Receber input do cliente
 
     receberEntrada(id, mensagem) {
         const jogador = this.jogadores.get(id);
@@ -226,9 +263,10 @@ export class Jogo {
             typeof teclas !== 'object' ||
             Array.isArray(teclas) ||
             Object.keys(teclas).length !== 4 ||
-            !TECLAS_PERMITIDAS.every(tecla =>
-                Object.hasOwn(teclas, tecla) &&
-                typeof teclas[tecla] === 'boolean'
+            !TECLAS_PERMITIDAS.every(
+                tecla =>
+                    Object.hasOwn(teclas, tecla) &&
+                    typeof teclas[tecla] === 'boolean'
             )
         ) {
             return false;
@@ -236,6 +274,7 @@ export class Jogo {
 
         const agora = Date.now();
 
+        // Reinicia janela de limite de entradas.
         if (
             agora - jogador.inicioJanelaTaxa >= 1000
         ) {
@@ -261,10 +300,6 @@ export class Jogo {
         return true;
     }
 
-    // ==========================================
-    // AÇÕES DAS TASKS
-    // ==========================================
-
     receberAcaoTask(jogadorId, mensagem) {
         const jogador = this.jogadores.get(jogadorId);
 
@@ -278,18 +313,15 @@ export class Jogo {
 
         const task = this.tasks.get(mensagem.taskId);
 
-        if (!task) return false;
+        if (!task) {
+            return false;
+        }
 
         return task.processarAcao(jogador, mensagem);
     }
 
-    // ==========================================
-    // VERIFICAÇÃO DE COLISÃO
-    // ==========================================
-
+    // Validação de colisão
     podeOcupar(jogador, x, z) {
-        const limites = CONFIGURACAO.limitesSala;
-
         if (
             !Number.isFinite(x) ||
             !Number.isFinite(z)
@@ -297,19 +329,11 @@ export class Jogo {
             return false;
         }
 
-        // Limites da sala.
-        if (
-            x < limites.minimoX ||
-            x > limites.maximoX ||
-            z < limites.minimoZ ||
-            z > limites.maximoZ
-        ) {
-            return false;
-        }
-
-        // Colisão entre jogadores.
+        // Colisão entre os jogadores.
         for (const outro of this.jogadores.values()) {
-            if (outro.id === jogador.id) continue;
+            if (outro.id === jogador.id) {
+                continue;
+            }
 
             if (
                 Math.abs(x - outro.x) <
@@ -321,31 +345,61 @@ export class Jogo {
             }
         }
 
-        // Colisão com geometria OBJ.
-        if (
-            this.colisoes?.posicaoBloqueada(
-                x,
-                jogador.y,
-                z
-            )
-        ) {
+        // Obtém a sala correspondente ao jogador.
+        const andar = this.predio.andares[jogador.andar];
+
+        if (!andar) {
             return false;
+        }
+
+        const sala = andar.salas[jogador.sala];
+
+        if (!sala) {
+            return false;
+        }
+
+        // Colisão com os OBJ da sala.
+        for (const objeto of Object.values(sala.objetos)) {
+            if (
+                !objeto.temColisao ||
+                !objeto.colisaoOBJ
+            ) {
+                continue;
+            }
+
+            const {
+                x: objetoX,
+                y: objetoY,
+                z: objetoZ
+            } = objeto.posicao;
+
+            // Transforma posição global em local.
+            const xLocal = x - objetoX;
+            const yLocal = jogador.y - objetoY;
+            const zLocal = z - objetoZ;
+
+            if (
+                objeto.colisaoOBJ.posicaoBloqueada(
+                    xLocal,
+                    yLocal,
+                    zLocal
+                )
+            ) {
+                return false;
+            }
         }
 
         return true;
     }
 
-    // ==========================================
-    // MOVIMENTAÇÃO COM COLISÃO
-    // ==========================================
-
+    // Movimentar se colidiu, deslizamento de personagem
     movimentarComColisao(jogador, dx, dz) {
         const distancia = Math.hypot(dx, dz);
 
-        if (distancia === 0) return;
+        if (distancia === 0) {
+            return;
+        }
 
-        // Divide o deslocamento para evitar atravessar
-        // obstáculos finos entre dois frames.
         const quantidadePassos = Math.ceil(
             distancia /
             CONFIGURACAO.distanciaMaximaPasso
@@ -355,8 +409,7 @@ export class Jogo {
         const passoZ = dz / quantidadePassos;
 
         for (let i = 0; i < quantidadePassos; i++) {
-
-            // Primeiro tenta movimentar no eixo X.
+            // Primeiro tenta no eixo X.
             const novoX = jogador.x + passoX;
 
             if (
@@ -369,7 +422,7 @@ export class Jogo {
                 jogador.x = novoX;
             }
 
-            // Depois tenta movimentar no eixo Z.
+            // Depois tenta no eixo Z.
             const novoZ = jogador.z + passoZ;
 
             if (
@@ -384,14 +437,12 @@ export class Jogo {
         }
     }
 
-    // ==========================================
-    // LOOP DE ATUALIZAÇÃO
-    // ==========================================
-
     atualizar(tempoDecorrido) {
-        if (!this.colisoes) return;
+        if (!this.inicializado) {
+            return;
+        }
 
-        // Evita deslocamentos enormes em atrasos do loop.
+        // Evita saltos de movimento por atrasos.
         tempoDecorrido = limitar(
             tempoDecorrido,
             0,
@@ -401,7 +452,6 @@ export class Jogo {
         const agora = Date.now();
 
         for (const jogador of this.jogadores.values()) {
-
             const teclas =
                 agora - jogador.instanteUltimaEntrada <=
                 CONFIGURACAO.tempoLimiteEntradaMs
@@ -416,7 +466,7 @@ export class Jogo {
 
             const angulo = jogador.anguloHorizontal;
 
-            // Movimentação relativa à direção da câmera.
+            // Movimento relativo à câmera FPS.
             let direcaoX =
                 lateral * Math.cos(angulo) +
                 frente * Math.sin(angulo);
@@ -430,9 +480,12 @@ export class Jogo {
                 direcaoZ
             );
 
-            if (comprimento === 0) continue;
+            // Não interrompe a atualização das tasks.
+            if (comprimento === 0) {
+                continue;
+            }
 
-            // Evita velocidade extra na diagonal.
+            // Normaliza para não acelerar na diagonal.
             direcaoX /= comprimento;
             direcaoZ /= comprimento;
 
@@ -446,7 +499,6 @@ export class Jogo {
                 CONFIGURACAO.velocidade *
                 tempoDecorrido;
 
-            // Agora utiliza a função de colisão!
             this.movimentarComColisao(
                 jogador,
                 dx,
@@ -454,23 +506,23 @@ export class Jogo {
             );
         }
 
-        // Atualiza as tasks independentemente
-        // de os jogadores estarem se movimentando.
+        // Tasks atualizam independentemente do WASD.
         for (const task of this.tasks.values()) {
-            const dono = task.jogadorId !== null
-                ? this.jogadores.get(task.jogadorId)
-                : null;
+            const dono =
+                task.jogadorId !== null
+                    ? this.jogadores.get(task.jogadorId)
+                    : null;
 
-            task.atualizar(tempoDecorrido, dono);
+            task.atualizar(
+                tempoDecorrido,
+                dono
+            );
         }
 
         this.passo++;
     }
 
-    // ==========================================
-    // ESTADO ENVIADO AOS CLIENTES
-    // ==========================================
-
+    // Estado enviado aos clientes
     criarEstado() {
         return {
             tipo: 'estado',
@@ -478,16 +530,12 @@ export class Jogo {
 
             jogadores: [
                 ...this.jogadores.values()
-            ].map(({
-                id,
-                cubo,
-                x,
-                z
-            }) => ({
-                id,
-                cubo,
-                x: Number(x.toFixed(4)),
-                z: Number(z.toFixed(4))
+            ].map(jogador => ({
+                id: jogador.id,
+                cubo: jogador.cubo,
+
+                x: Number(jogador.x.toFixed(4)),
+                z: Number(jogador.z.toFixed(4))
             })),
 
             tasks: [

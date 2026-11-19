@@ -35,35 +35,45 @@ export class Andar{
     }
 }
 
-export class Sala{
-    constructor(nome){
+export class Sala {
+    constructor(nome) {
         this.nome = nome;
         this.mesh = null;
         this.objetos = {};
         this.limites = {};
     }
-    criarObjeto(nomeObjeto, aabb){
-        if(!this.objetos[nomeObjeto]){
-            this.objetos[nomeObjeto] = new Objeto(nomeObjeto, aabb);
+
+    criarObjeto(nomeObjeto, mesh, temColisao = true) {
+        if (!this.objetos[nomeObjeto]) {
+            this.objetos[nomeObjeto] = new Objeto(
+                nomeObjeto,
+                mesh,
+                temColisao
+            );
         }
+
         return this.objetos[nomeObjeto];
     }
 }
 
-export class Objeto{
-    constructor(nome, mesh, temColisao = true){
+export class Objeto {
+    constructor(nome, mesh, temColisao = true) {
         this.nome = nome;
         this.mesh = mesh;
         this.temColisao = temColisao;
 
-        this.posicao = [];
+        this.posicao = { x: 0, y: 0, z: 0 };
         this.textura = [];
         this.normais = [];
 
+        // Caixas AABB de cada parte do modelo OBJ.
         this.aabb = null;
+
+        // Resultado do leitor de colisões.
+        this.colisaoOBJ = null;
     }
-    
 }
+
 
 export class ObjetoInterativo extends Objeto{
     constructor(nome, mesh, temColisao, funcaoDeInteracao){
