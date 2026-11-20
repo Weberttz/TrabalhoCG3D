@@ -1,4 +1,4 @@
-import { OBJETOS_QUARTO } from './mapa.js';
+import { obterObjetosMapa } from './mapa.js';
 import { lerTeclas } from "./teclado.js";
 import { enviarTeclas, obterSessao } from "./rede.js";
 import { criarRenderizador } from "./renderizador.js";
@@ -12,9 +12,9 @@ async function carregarModelos() {
     // Obtém os nomes dos modelos, sem duplicatas.
     const nomesModelos = [
         ...new Set(
-            OBJETOS_QUARTO
-                .filter(objeto => objeto.modelo)
+            obterObjetosMapa()
                 .map(objeto => objeto.modelo)
+                .filter(Boolean)
         )
     ];
 

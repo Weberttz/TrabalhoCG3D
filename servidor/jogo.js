@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
 import { Predio } from '../compartilhado/estruturaPredio.js';
-import { OBJETOS_QUARTO } from '../compartilhado/mapa.js';
+import { MAPA, obterObjetosMapa } from '../compartilhado/mapa.js';
 
 const DIRETORIO_ATUAL = path.dirname(
     fileURLToPath(import.meta.url)
@@ -47,48 +47,45 @@ export class Jogo {
 
         this.predio = new Predio('CCT');
 
-        const andar = this.predio.criarAndar('Andar00');
+        this.andar = this.predio.criarAndar('Andar00');
 
-        this.sala = andar.criarSala('Sala002');
-
-        // Cache de geometrias OBJ.
+        // Armazena as geometrias OBJ carregadas.
         this.modelosColisao = new Map();
+
+        // Armazena todas as instâncias com colisão.
+        this.instanciasColisao = [];
 
         this.inicializado = false;
     }
- 
-    // Inicialização do cenário
+
     async inicializar() {
-        for (const [indice, descricao] of OBJETOS_QUARTO.entries()) {
-            if (!descricao.modelo) continue;
+        // Primeiro cria as salas.
+        for (const descricao of MAPA) {
+            this.andar.criarSala(descricao.nome);
+        }
 
-            // A geometria da sala possui paredes
-            // com colisão mesmo se solido=false.
-            const temColisao =
-                descricao.solido === true ||
-                descricao.modelo === 'SalaGenerica.obj';
+        // Depois registra cada objeto em sua sala.
+        for (const descricao of obterObjetosMapa()) {
 
-            // Garante nome único para cada instância.
-            const nomeInstancia = `${descricao.nome}_${indice}`;
+            const sala = this.andar.salas[descricao.sala];
 
-            const objeto = this.sala.criarObjeto(
-                nomeInstancia,
+            const objeto = sala.criarObjeto(
+                descricao.nome,
                 descricao.modelo,
-                temColisao
+                descricao.solido
             );
 
             objeto.posicao = {
-                x: descricao.x ?? 0,
-                y: descricao.y ?? 0,
-                z: descricao.z ?? 0
+                x: descricao.x,
+                y: descricao.y,
+                z: descricao.z
             };
 
             objeto.rotacaoY = descricao.rotacaoY ?? 0;
 
-            if (!temColisao) {
-                continue;
-            }
+            if (!objeto.temColisao) continue;
 
+            // Reutiliza a geometria se já estiver carregada.
             if (!this.modelosColisao.has(descricao.modelo)) {
                 const caminho = path.resolve(
                     DIRETORIO_ATUAL,
@@ -96,7 +93,8 @@ export class Jogo {
                     descricao.modelo
                 );
 
-                const geometria = await carregarColisoesOBJ(caminho);
+                const geometria =
+                    await carregarColisoesOBJ(caminho);
 
                 this.modelosColisao.set(
                     descricao.modelo,
@@ -111,20 +109,12 @@ export class Jogo {
             objeto.aabb = geometria.colisores;
             objeto.colisaoOBJ = geometria;
 
-            console.log(
-                `[Jogo] ${nomeInstancia}: ` +
-                `${geometria.totalColisores} colisores`
-            );
+            this.instanciasColisao.push(objeto);
         }
 
         this.inicializado = true;
-
-        console.log('[Jogo] Prédio inicializado.');
-        console.log(
-            '[Jogo] Objetos registrados:',
-            Object.keys(this.sala.objetos)
-        );
     }
+
 
     adicionarJogador(conexao) {
         if (!this.inicializado) {
@@ -156,7 +146,7 @@ export class Jogo {
 
         const posicao = posicoesIniciais.find(posicao =>
             this.podeOcupar(
-                { id: -1, y: posicao.y, andar: 'Andar00', sala: 'Sala002' },
+                { id: -1, y: posicao.y, andar: 'Andar00', sala: 'Sala001' },
                 posicao.x,
                 posicao.z
             )
@@ -189,7 +179,7 @@ export class Jogo {
 
             // Localização na estrutura do prédio.
             andar: 'Andar00',
-            sala: 'Sala002'
+            sala: 'Sala001'
         };
 
         this.jogadores.set(jogador.id, jogador);

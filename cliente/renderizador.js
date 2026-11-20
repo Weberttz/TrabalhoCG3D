@@ -1,4 +1,4 @@
-import { OBJETOS_QUARTO } from './mapa.js';
+import { obterObjetosMapa } from './mapa.js';
 const SHADER_VERTICE = `#version 300 es
 in vec3 aPosicao;
 uniform mat4 uMatrizMVP;
@@ -89,6 +89,18 @@ function translacao(x, y, z) {
   ]);
 }
 
+function rotacaoY(angulo) {
+    const c = Math.cos(angulo);
+    const s = Math.sin(angulo);
+
+    return new Float32Array([
+         c, 0, -s, 0,
+         0, 1,  0, 0,
+         s, 0,  c, 0,
+         0, 0,  0, 1
+    ]);
+}
+
 function verticesCubo() {
   const pontos = [
     [-.4, -.4, -.4], [.4, -.4, -.4], [.4, .4, -.4], [-.4, .4, -.4],
@@ -142,7 +154,7 @@ export function criarRenderizador(canvas, modelos = {}) {
   }
 
   // Geometria e cores do quarto são importadas, não ficam espalhadas aqui.
-  const objetos = OBJETOS_QUARTO;
+  const objetos = obterObjetosMapa();
   gl.useProgram(programa);
   gl.enableVertexAttribArray(atributoPosicao);
   gl.enable(gl.DEPTH_TEST);
@@ -186,21 +198,44 @@ export function criarRenderizador(canvas, modelos = {}) {
       const camera = multiplicar(projecao, olharPara(olho, alvo));
 
       for (const objeto of objetos) {
-        const malhaOBJ = buffersOBJ[objeto.modelo]
+          const malhaOBJ = buffersOBJ[objeto.modelo];
 
-        if(malhaOBJ) {
-            const modelo = translacao(
-            objeto.x,
-            objeto.y,
-            objeto.z
-            );
+          if (!malhaOBJ) {
+              console.warn(
+                  `Modelo não carregado: ${objeto.modelo}`
+              );
+              continue;
+          }
 
-            desenharMalha(malhaOBJ, gl.TRIANGLES, multiplicar(camera, modelo), objeto.cor);
-        } else {
-          const modelo = modeloCaixa(objeto.x, objeto.y, objeto.z,
-          objeto.largura, objeto.altura, objeto.profundidade);
-          desenharMalha(cubo, gl.TRIANGLES, multiplicar(camera, modelo), objeto.cor);
-        }
+          // Matriz de translação.
+          const matrizTranslacao = translacao(
+              objeto.x,
+              objeto.y,
+              objeto.z
+          );
+
+          // Matriz de rotação.
+          const matrizRotacao = rotacaoY(
+              objeto.rotacaoY ?? 0
+          );
+
+          // Aplica a rotação e depois a translação.
+          const matrizModelo = multiplicar(
+              matrizTranslacao,
+              matrizRotacao
+          );
+
+          const matrizFinal = multiplicar(
+              camera,
+              matrizModelo
+          );
+
+          desenharMalha(
+              malhaOBJ,
+              gl.TRIANGLES,
+              matrizFinal,
+              objeto.cor ?? [0.7, 0.7, 0.7]
+          );  
       }
 
       for (const jogador of jogadores) {

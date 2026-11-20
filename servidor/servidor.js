@@ -5,7 +5,6 @@ import { stat, realpath } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { Jogo, CONFIGURACAO } from './jogo.js';
-import { carregarColisoesOBJ  } from './colisaoOBJ.js';
 
 const PORTA = Number(process.env.PORT || 3000);
 const jogo = new Jogo();
