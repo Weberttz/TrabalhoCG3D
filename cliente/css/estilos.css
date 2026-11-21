@@ -1,0 +1,296 @@
+:root {
+    font-family: system-ui, sans-serif;
+    color: #e7eefb;
+    background: #0b1220;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+}
+
+main {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: clamp(22px, 3vw, 33px);
+}
+
+p {
+    color: #b6c7df;
+    line-height: 1.45;
+}
+
+.painel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 0;
+}
+
+.painel span {
+    background: #1b2b42;
+    border: 1px solid #304560;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+canvas {
+    width: 100%;
+    display: block;
+    background: #121c2c;
+    border: 1px solid #3d5573;
+    border-radius: 10px;
+}
+
+.dica {
+    font-size: 14px;
+}
+
+.area-jogo {
+    position: relative;
+}
+
+.area-jogo canvas {
+    display: block;
+}
+
+#mira {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: 24px;
+    height: 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1;
+
+    z-index: 100;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Canvas ocupando a tela inteira */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+#jogo {
+    position: fixed;
+    inset: 0;
+
+    width: 100vw !important;
+    height: 100vh !important;
+
+    max-width: none !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+
+    display: block;
+    z-index: 0;
+}
+
+/* A interface fica sobre o canvas */
+#hud-cozy {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+
+    pointer-events: none;
+    font-family: 'Trebuchet MS', sans-serif;
+    color: #40536b;
+}
+
+/* Apenas os elementos interativos recebem cliques */
+#hud-cozy button {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Identidade do jogo */
+.hud-identidade {
+    position: absolute;
+    top: 22px;
+    left: 24px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    background: #fff8ed;
+    padding: 12px 18px;
+    border-radius: 20px;
+
+    box-shadow: 0 5px 18px #17243a26;
+}
+
+.hud-logo {
+    background: #8aabdb;
+    color: white;
+
+    padding: 12px;
+    border-radius: 14px;
+
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.hud-identidade small {
+    display: block;
+    color: #8290a1;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.hud-identidade strong {
+    font-size: 18px;
+}
+
+/* Horário */
+.hud-horario {
+    position: absolute;
+    top: 105px;
+    left: 24px;
+
+    background: #fff1d9;
+    padding: 12px 20px;
+    border-radius: 17px;
+
+    box-shadow: 0 4px 16px #17243a24;
+}
+
+/* Missões */
+.hud-missoes {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+
+    background: #e8f2e4;
+    border-radius: 18px;
+    padding: 12px;
+
+    width: 240px;
+    box-shadow: 0 4px 16px #17243a24;
+}
+
+.hud-missoes button {
+    width: 100%;
+    border: none;
+    background: transparent;
+
+    color: #426b54;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: left;
+}
+
+.hud-lista-missoes {
+    margin-top: 12px;
+    padding: 8px;
+    border-top: 1px solid #c9ddc8;
+}
+
+.hud-lista-missoes[hidden] {
+    display: none;
+}
+
+.hud-lista-missoes ul {
+    padding-left: 20px;
+    font-size: 13px;
+}
+
+/* Inventário */
+.hud-inventario {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    display: flex;
+    gap: 9px;
+
+    padding: 10px;
+    border-radius: 22px;
+
+    background: #fff8ed;
+    box-shadow: 0 6px 22px #17243a35;
+}
+
+.hud-slot {
+    width: 64px;
+    height: 64px;
+
+    border: 2px solid #ffffff;
+    border-radius: 15px;
+
+    background: #e4eefb;
+    color: #6682a5;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    transition: transform 0.15s, border-color 0.15s;
+}
+
+.hud-slot:nth-child(2) { background: #ffe5d4; }
+.hud-slot:nth-child(3) { background: #eee2ff; }
+.hud-slot:nth-child(4) { background: #e1f0dc; }
+
+.hud-slot.ativo {
+    border-color: #5889c5;
+    transform: translateY(-5px);
+    box-shadow: 0 4px 10px #5889c544;
+}
+
+@media (max-width: 600px) {
+    .hud-identidade {
+        top: 12px;
+        left: 12px;
+        padding: 9px;
+    }
+
+    .hud-identidade small {
+        display: none;
+    }
+
+    .hud-horario {
+        top: 82px;
+        left: 12px;
+    }
+
+    .hud-missoes {
+        top: 12px;
+        right: 12px;
+        width: 125px;
+    }
+
+    .hud-slot {
+        width: 49px;
+        height: 49px;
+    }
+}
