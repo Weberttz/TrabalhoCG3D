@@ -126,3 +126,64 @@ export function obterObjetosMapa() {
 
 export const COLISORES_QUARTO =
     obterObjetosMapa().filter(objeto => objeto.solido);
+
+// Retorna o objeto próximo ao jogador, se ele estiver olhando
+export function obterObjetoInterativoProximo(
+    jogador,
+    objetos,
+    direcaoOlhar,
+    distanciaMaxima = 2,
+    anguloMaximo = 35
+) {
+    if (!jogador || !direcaoOlhar) return null;
+
+    const moduloOlhar = Math.hypot(
+        direcaoOlhar.x,
+        direcaoOlhar.z
+    );
+
+    if (moduloOlhar === 0) return null;
+
+    // Normaliza o vetor de direção do olhar.
+    const olharX = direcaoOlhar.x / moduloOlhar;
+    const olharZ = direcaoOlhar.z / moduloOlhar;
+
+    // Limite do produto escalar.
+    const cosLimite = Math.cos(
+        anguloMaximo * Math.PI / 180
+    );
+
+    let objetoProximo = null;
+    let menorDistancia = Infinity;
+
+    for (const objeto of objetos) {
+        if (!objeto.interativo) continue;
+
+        // Vetor do jogador até o objeto.
+        const dx = objeto.x - jogador.x;
+        const dz = objeto.z - jogador.z;
+
+        const distancia = Math.hypot(dx, dz);
+
+        const alcance =
+            objeto.alcanceInteracao ?? distanciaMaxima;
+
+        if (distancia > alcance) continue;
+
+        // Produto escalar entre o olhar e o
+        // vetor normalizado em direção ao objeto.
+        const alinhamento = distancia > 0.000001
+            ? (olharX * dx + olharZ * dz) / distancia
+            : 1;
+
+        // Objeto fora do cone de visão.
+        if (alinhamento < cosLimite) continue;
+
+        if (distancia < menorDistancia) {
+            menorDistancia = distancia;
+            objetoProximo = objeto;
+        }
+    }
+
+    return objetoProximo;
+}

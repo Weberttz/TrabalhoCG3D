@@ -1,4 +1,4 @@
-import { obterObjetosMapa } from './mapa.js';
+import { obterObjetosMapa, obterObjetoInterativoProximo } from './mapa.js';
 import { lerTeclas, configurarInteracao } from "./teclado.js";
 import { enviarTeclas, enviarInteracao, obterSessao } from "./rede.js";
 import { criarRenderizador } from "./renderizador.js";
@@ -52,6 +52,9 @@ async function iniciarJogo() {
     enviarInteracao();
   });
 
+  const objetosInterativos = obterObjetosMapa()
+    .filter(objeto => objeto.interativo);
+
   // A cada 50 ms: envia teclas. O servidor decide para onde cada cubo vai.
   setInterval(() => {
     const { anguloHorizontal } = obterOrientacao();
@@ -61,6 +64,26 @@ async function iniciarJogo() {
   // O navegador desenha na taxa do monitor: não é ele que calcula a física.
   function desenharQuadro() {
     const { meuId, estado, situacao } = obterSessao();
+    const { anguloHorizontal } = obterOrientacao();
+
+    const direcaoOlhar = {
+        x: Math.sin(anguloHorizontal),
+        z: -Math.cos(anguloHorizontal)
+    };
+
+    // Encontra o jogador local.
+    const meuJogador = estado.jogadores.find(
+        jogador => jogador.id === meuId
+    );
+
+    // Verifica proximidade.
+    const objetoProximo = obterObjetoInterativoProximo(
+        meuJogador,
+        objetosInterativos,
+        direcaoOlhar,
+        2,
+        35
+    );
 
     const minhasMissoes = (estado.tasks ?? [])
     .filter(task => task.jogadorId === meuId)
@@ -68,7 +91,8 @@ async function iniciarJogo() {
         nome: task.nome ?? task.id,
         concluida: task.status === 'concluida'
     }));
-
+    
+    hud.atualizarInteracao(objetoProximo);
     hud.atualizarMissoes(minhasMissoes);
     renderizador.desenhar(estado.jogadores, meuId, obterOrientacao());
     requestAnimationFrame(desenharQuadro);

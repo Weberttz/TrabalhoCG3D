@@ -73,6 +73,25 @@ export function criarHUD() {
 
     const canvas = document.getElementById('jogo');
 
+    const avisoInteracao = document.createElement('div');
+    avisoInteracao.id = 'hud-interacao';
+    avisoInteracao.hidden = true;
+
+    avisoInteracao.innerHTML = `
+        <span class="hud-interacao-tecla">E</span>
+
+        <div class="hud-interacao-texto">
+            <strong>Interagir</strong>
+            <small id="hud-interacao-nome"></small>
+        </div>
+    `;
+
+    hud.appendChild(avisoInteracao);
+
+    const nomeInteracao = avisoInteracao.querySelector(
+        '#hud-interacao-nome'
+    );
+
     // painel de missões aparece
     function alternarMissoes() {
       painel.hidden = !painel.hidden;
@@ -133,6 +152,16 @@ export function criarHUD() {
 
                 lista.appendChild(item);
             }
+        },
+
+        atualizarInteracao(objeto) {
+            if (!objeto) {
+                avisoInteracao.hidden = true;
+                return;
+            }
+
+            nomeInteracao.textContent = objeto.nome;
+            avisoInteracao.hidden = false;
         },
 
         estaComMissoesAbertas() {
