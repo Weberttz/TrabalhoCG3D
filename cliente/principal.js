@@ -66,7 +66,7 @@ async function iniciarJogo() {
     .filter(task => task.jogadorId === meuId)
     .map(task => ({
         nome: task.nome ?? task.id,
-        concluida: task.concluida ?? false
+        concluida: task.status === 'concluida'
     }));
 
     hud.atualizarMissoes(minhasMissoes);
