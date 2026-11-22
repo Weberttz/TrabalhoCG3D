@@ -24,6 +24,16 @@ const ITENS_EXEMPLO = [
   { id: 'bloco', nome: 'Anotações', icone: 'bloco' }
 ];
 
+export function recolherSubString(string){
+    // indice da primeira letra maiúscula da palavra, ou do primeiro numeral
+    const indice = string.search(/[\p{Lu}\p{N}]/u);
+    const resultado = indice === -1
+        ? string
+        : string.slice(0, indice);
+
+    return resultado
+}
+
 export function criarHUD() {
     const hud = document.createElement('div');
 
@@ -45,7 +55,7 @@ export function criarHUD() {
 
         <div class="hud-missoes">
             <button id="botao-missoes" type="button">
-                💻 Missões ▾
+                Missões ▾
             </button>
 
             <div id="painel-missoes"
@@ -85,6 +95,14 @@ export function criarHUD() {
             <small id="hud-interacao-nome"></small>
         </div>
     `;
+
+    // =====================================
+    // TOAST DE MISSÃO CONCLUÍDA
+    // =====================================
+    const hudToast = document.createElement('div');
+    hudToast.className = 'hud-toast-missao';
+    hudToast.hidden = true;
+    hud.appendChild(hudToast);
 
     hud.appendChild(avisoInteracao);
 
@@ -142,16 +160,24 @@ export function criarHUD() {
         },
 
         atualizarMissoes(missoes) {
-            const lista = hud.querySelector('#lista-missoes');
-            lista.replaceChildren();
+            const lista = document.querySelector('.hud-lista-missoes');
+            if (!lista) return;
 
-            for (const missao of missoes) {
-                const item = document.createElement('li');
-                item.textContent =
-                    `${missao.concluida ? '✓' : '○'} ${missao.nome}`;
-
-                lista.appendChild(item);
+            if (!missoes || missoes.length === 0) {
+                lista.innerHTML = `<p class="hud-missao-vazia">Nenhuma missão ativa</p>`;
+                return;
             }
+
+            lista.innerHTML = `
+                <ul class="hud-missoes-ul">
+                    ${missoes.map(missao => `
+                        <li class="hud-missao-item ${missao.concluida ? 'concluida' : ''}">
+                            <span class="hud-missao-bolinha">${missao.concluida ? '✓' : '•'}</span>
+                            <span class="hud-missao-nome">${missao.nome}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
         },
 
         atualizarInteracao(objeto) {
@@ -160,12 +186,34 @@ export function criarHUD() {
                 return;
             }
 
-            nomeInteracao.textContent = objeto.nome;
+            const nomeObjeto = recolherSubString(objeto.nome);
+            nomeInteracao.textContent = nomeObjeto;
             avisoInteracao.hidden = false;
         },
 
         estaComMissoesAbertas() {
           return !painel.hidden;
+        },
+
+        mostrarConclusaoMissao(nomeMissao) {
+            hudToast.innerHTML = `
+                <div class="hud-toast-icone">✓</div>
+                <div class="hud-toast-texto">
+                    <strong>Missão concluída!</strong>
+                    <span>${nomeMissao}</span>
+                </div>
+            `;
+
+            hudToast.hidden = false;
+            hudToast.classList.remove('aparecendo');
+            void hudToast.offsetWidth; // reinicia animação
+            hudToast.classList.add('aparecendo');
+
+            clearTimeout(this._timeoutToast);
+            this._timeoutToast = setTimeout(() => {
+                hudToast.hidden = true;
+                hudToast.classList.remove('aparecendo');
+            }, 2600);
         },
 
         destruir() {

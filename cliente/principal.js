@@ -40,7 +40,20 @@ async function carregarModelos() {
     return modelos;
 }
 
+function obterNomeMissao(task) {
+    const nomes = {
+        task_lixo_sala002: 'Recolher o lixo da Sala 002',
+        task_energia_1: 'Restaurar a energia'
+    };
+
+    return nomes[task.id]
+        ?? (task.nome && task.nome !== task.id
+            ? task.nome
+            : String(task.id).replace(/^task_/, '').replaceAll('_', ' '));
+}
+
 async function iniciarJogo() {
+  const estadoAnteriorMissoes = new Map();
   const hud = criarHUD();
   const modelos = await carregarModelos();
   const renderizador = criarRenderizador(
@@ -66,6 +79,35 @@ async function iniciarJogo() {
     const { meuId, estado, situacao } = obterSessao();
     const { anguloHorizontal } = obterOrientacao();
 
+    const minhasMissoes = (estado.tasks ?? [])
+        .filter(task =>
+            String(task.jogadorId) === String(meuId)
+        )
+        .map(task => ({
+            id: task.id,
+            nome: obterNomeMissao(task),
+            concluida:
+                task.concluida === true ||
+                task.status === 'concluida'
+        }));
+
+    // Verifica quais missões acabaram de ser concluídas.
+    for (const missao of minhasMissoes) {
+        const anterior = estadoAnteriorMissoes.get(missao.id);
+
+        if (anterior === false && missao.concluida) {
+            hud.mostrarConclusaoMissao(missao.nome);
+        }
+
+        estadoAnteriorMissoes.set(
+            missao.id,
+            missao.concluida
+        );
+    }
+
+    // Atualiza a lista visual.
+    hud.atualizarMissoes(minhasMissoes);
+
     const direcaoOlhar = {
         x: Math.sin(anguloHorizontal),
         z: -Math.cos(anguloHorizontal)
@@ -84,16 +126,8 @@ async function iniciarJogo() {
         2,
         35
     );
-
-    const minhasMissoes = (estado.tasks ?? [])
-    .filter(task => task.jogadorId === meuId)
-    .map(task => ({
-        nome: task.nome ?? task.id,
-        concluida: task.status === 'concluida'
-    }));
     
     hud.atualizarInteracao(objetoProximo);
-    hud.atualizarMissoes(minhasMissoes);
     renderizador.desenhar(estado.jogadores, meuId, obterOrientacao());
     requestAnimationFrame(desenharQuadro);
   }

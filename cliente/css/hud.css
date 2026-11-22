@@ -1,728 +1,407 @@
+/* ============================================================
+   HUD NC2A — CSS consolidado
+   Mantém: bordas, relevo, proporções e centralização do painel.
+   Sem regras duplicadas da versão antiga.
+   ============================================================ */
+
 :root {
-  --hud-creme: #fff9ee;
-  --hud-papel: #fffbf3;
-  --hud-ink: #35465b;
-  --hud-azul: #7e9cc9;
-  --hud-azul-forte: #4e709f;
-  --hud-verde: #92bd9d;
-  --hud-verde-forte: #477b61;
-  --hud-pessego: #f9c6a3;
-  --hud-sombra: 0 10px 35px rgba(44, 51, 60, .17), 0 3px 10px rgba(44, 51, 60, .07);
+    --hud-ink: #40536b;
 }
 
-.ncca-hud {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  pointer-events: none;
-  color: var(--hud-ink);
-  font-family: ui-rounded, 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
-  font-size: 14px;
-}
-
-.ncca-hud *,
-.ncca-hud *::before,
-.ncca-hud *::after {
-  box-sizing: border-box;
-}
-
-.ncca-hud button {
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.ncca-hud svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.ncca-marca {
-  position: absolute;
-  left: clamp(15px, 3vw, 48px);
-  top: clamp(15px, 2.7vw, 35px);
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 9px 18px 9px 10px;
-  background: rgba(255, 251, 242, .91);
-  border: 2px solid rgba(255, 255, 255, .96);
-  border-radius: 20px;
-  box-shadow: var(--hud-sombra);
-  max-width: min(450px, 75vw);
-  backdrop-filter: blur(9px);
-}
-
-.ncca-marca__icone {
-  width: 54px;
-  height: 54px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  border-radius: 15px;
-  color: #fffef7;
-  background: linear-gradient(145deg, #557eb7, #89a9d6);
-  box-shadow: inset 0 2px 1px #ffffff35, 0 3px 6px #44618a35;
-}
-
-.ncca-marca__subtitulo {
-  display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  font-weight: 800;
-  letter-spacing: .11em;
-  color: #86909f;
-  white-space: nowrap;
-}
-
-.ncca-marca__titulo {
-  font-weight: 900;
-  line-height: 1.25;
-  font-size: clamp(17px, 2vw, 24px);
-  letter-spacing: -.025em;
-  white-space: nowrap;
-}
-
-.ncca-marca__titulo [data-hud-sigla] {
-  color: #547cae;
-}
-
-.ncca-marca__separador {
-  color: #e5a28b;
-  padding: 0 .24em;
-}
-
-.ncca-horario {
-  position: absolute;
-  left: clamp(15px, 3vw, 48px);
-  top: clamp(110px, 13.8vh, 148px);
-  min-width: 193px;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  border-radius: 18px;
-  padding: 10px 12px;
-  color: #506788;
-  background: rgba(252, 249, 238, .92);
-  border: 2px solid rgba(255, 255, 255, .96);
-  box-shadow: var(--hud-sombra);
-  backdrop-filter: blur(8px);
-}
-
-.ncca-horario__icone {
-  width: 45px;
-  height: 45px;
-  padding: 10px;
-  flex-shrink: 0;
-  color: #de995d;
-  border-radius: 14px;
-  background: #fff0cd;
-}
-
-.ncca-horario__conteudo {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.ncca-rotulo {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .17em;
-  color: #9695a5;
-}
-
-.ncca-horario strong {
-  font-size: 22px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-}
-
-.ncca-horario__periodo {
-  font-size: 10px;
-  font-weight: 800;
-  color: #a06f59;
-  padding: 5px 7px;
-  background: #fbe8d8;
-  border-radius: 999px;
-  margin-left: 4px;
-  align-self: center;
-}
-
-.ncca-missoes {
-  position: absolute;
-  right: clamp(15px, 3vw, 48px);
-  top: clamp(110px, 13.8vh, 148px);
-  width: min(280px, calc(100vw - 30px));
-  pointer-events: none;
-}
-
-.ncca-missoes__botao {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-align: left;
-  background: rgba(247, 255, 238, .93);
-  border: 2px solid rgba(255, 255, 255, .96);
-  border-radius: 20px;
-  padding: 13px;
-  box-shadow: var(--hud-sombra);
-  pointer-events: auto;
-  backdrop-filter: blur(7px);
-  transition: transform .16s ease, background .16s ease;
-}
-
-.ncca-missoes__botao:hover {
-  transform: translateY(-2px);
-  background: #f6ffed;
-}
-
-.ncca-missoes__botao:focus-visible,
-.ncca-slot:focus-visible {
-  outline: 3px solid #ecaf67;
-  outline-offset: 3px;
-}
-
-.ncca-missoes__icone {
-  background: #dbeedd;
-  border-radius: 14px;
-  padding: 9px;
-  width: 45px;
-  height: 45px;
-  color: #4f8761;
-  flex-shrink: 0;
-}
-
-.ncca-missoes__texto {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ncca-missoes__texto strong {
-  color: #436c51;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.ncca-missoes__texto small {
-  color: #75967a;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.ncca-missoes__seta {
-  font-size: 25px;
-  color: #729976;
-  transition: transform .2s ease;
-}
-
-.ncca-missoes__botao[aria-expanded="true"] .ncca-missoes__seta {
-  transform: rotate(180deg);
-}
-
-.ncca-missoes__painel {
-  margin-top: 10px;
-  background: rgba(255, 251, 242, .96);
-  border: 2px solid #fff;
-  border-radius: 20px;
-  box-shadow: var(--hud-sombra);
-  padding: 17px 16px 13px;
-  pointer-events: auto;
-  backdrop-filter: blur(8px);
-  animation: ncca-entrar .18s ease-out both;
-}
-
-.ncca-missoes__painel[hidden] {
-  display: none;
-}
-
-.ncca-missoes__painel-titulo {
-  font-weight: 900;
-  font-size: 13px;
-  color: #60745b;
-  display: flex;
-  justify-content: space-between;
-}
-
-.ncca-missoes__painel-titulo span {
-  color: #daa35c;
-}
-
-.ncca-missoes__lista {
-  list-style: none;
-  margin: 11px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.ncca-missao {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 10px 9px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #596c5a;
-  border-radius: 11px;
-  background: #f3f7eb;
-}
-
-.ncca-missao__marcador {
-  color: #7ab18d;
-  font-size: 17px;
-  line-height: 14px;
-  flex: 0 0 18px;
-}
-
-.ncca-missao--feita {
-  color: #9caa9b;
-  background: #f5f6ef;
-}
-
-.ncca-missao--feita>span:last-child {
-  text-decoration: line-through;
-}
-
-.ncca-missoes__rodape {
-  text-align: center;
-  font-size: 10px;
-  font-weight: 800;
-  color: #b2a795;
-  margin: 13px 0 0;
-}
-
-.ncca-inventario {
-  position: absolute;
-  bottom: clamp(28px, 4.2vh, 52px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-}
-
-.ncca-inventario__cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 5px 16px 4px;
-  min-width: 105px;
-  border-radius: 999px;
-  background: rgba(255, 249, 237, .95);
-  border: 2px solid #fff;
-  color: #607aa2;
-  box-shadow: 0 5px 15px #243c5b1c;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .17em;
-}
-
-.ncca-inventario__cabecalho svg {
-  width: 15px;
-  height: 15px;
-}
-
-.ncca-inventario__slots {
-  display: flex;
-  gap: 8px;
-  background: rgba(255, 248, 233, .90);
-  padding: 9px;
-  border: 2px solid rgba(255, 255, 255, .95);
-  border-radius: 24px;
-  box-shadow: 0 11px 30px #29436528, 0 3px 9px #29436521;
-  pointer-events: auto;
-  backdrop-filter: blur(8px);
-}
-
-.ncca-slot {
-  position: relative;
-  width: clamp(55px, 6.7vw, 78px);
-  height: clamp(55px, 6.7vw, 78px);
-  border: 2px solid #d0def2;
-  border-radius: 17px;
-  background: linear-gradient(145deg, #eaf2ff, #dce9f9);
-  box-shadow: inset 0 2px 5px #ffffffd0, 0 2px 1px #a6bddb88;
-  display: grid;
-  place-items: center;
-  transition: background .18s ease, transform .18s ease, border-color .18s ease;
-}
-
-.ncca-slot:nth-child(2) {
-  background: linear-gradient(145deg, #fff0e3, #f7d6be);
-  border-color: #f6d5b8;
-}
-
-.ncca-slot:nth-child(3) {
-  background: linear-gradient(145deg, #f3eaff, #e4dafa);
-  border-color: #d8c5ef;
-}
-
-.ncca-slot:nth-child(4) {
-  background: linear-gradient(145deg, #edf7e6, #dcebcf);
-  border-color: #cbdfc4;
-}
-
-.ncca-slot:hover {
-  transform: translateY(-4px);
-}
-
-.ncca-slot--ativo {
-  border-color: #6f92c8 !important;
-  outline: 3px solid #93b4e5;
-  outline-offset: 1px;
-  transform: translateY(-5px);
-}
-
-.ncca-slot__arte {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  color: #6c85ab;
-  padding: 3px;
-  filter: drop-shadow(0 3px 1px #60718a14);
-}
-
-.ncca-slot:nth-child(2) .ncca-slot__arte {
-  color: #c28b64;
-}
-
-.ncca-slot:nth-child(3) .ncca-slot__arte {
-  color: #8b78b5;
-}
-
-.ncca-slot:nth-child(4) .ncca-slot__arte {
-  color: #749a6d;
-}
-
-.ncca-slot kbd {
-  position: absolute;
-  right: -3px;
-  bottom: -5px;
-  background: #fffaf1;
-  border: 1px solid #cad8ec;
-  border-radius: 7px;
-  padding: 2px 6px;
-  font: 900 11px/1.2 inherit;
-  color: #6680a8;
-  box-shadow: 0 2px 3px #39496722;
-}
-
-.ncca-inventario__nome {
-  border-radius: 999px;
-  background: rgba(255, 250, 239, .85);
-  padding: 5px 13px;
-  color: #71819a;
-  font-size: 11px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.ncca-controles {
-  position: absolute;
-  right: 22px;
-  bottom: 18px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: #fffaf2b5;
-  border: 1px solid #fff9;
-  color: #657388;
-  font-weight: 800;
-  font-size: 10px;
-  padding: 6px 10px;
-  border-radius: 999px;
-}
-
-.ncca-controles kbd {
-  font: inherit;
-  color: #46648e;
-}
-
-.ncca-controles span {
-  color: #d7ad81;
-}
-
-@keyframes ncca-entrar {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 720px) {
-  .ncca-marca {
-    max-width: calc(100vw - 32px);
-    padding: 7px 11px 7px 7px;
-    gap: 9px;
-  }
-
-  .ncca-marca__icone {
-    height: 40px;
-    width: 40px;
-    padding: 8px;
-    border-radius: 12px;
-  }
-
-  .ncca-marca__subtitulo {
-    font-size: 8px;
-    letter-spacing: 0;
-    white-space: normal;
-  }
-
-  .ncca-marca__titulo {
-    font-size: 17px;
-  }
-
-  .ncca-horario {
-    top: 94px;
-    min-width: auto;
-    padding: 8px;
-  }
-
-  .ncca-horario__icone {
-    width: 36px;
-    height: 36px;
-    padding: 8px;
-  }
-
-  .ncca-horario strong {
-    font-size: 17px;
-  }
-
-  .ncca-horario__periodo {
-    display: none;
-  }
-
-  .ncca-missoes {
-    top: 94px;
-    width: 160px;
-  }
-
-  .ncca-missoes__botao {
-    padding: 8px;
-    gap: 7px;
-    border-radius: 15px;
-  }
-
-  .ncca-missoes__icone {
-    height: 35px;
-    width: 35px;
-    padding: 7px;
-    border-radius: 11px;
-  }
-
-  .ncca-missoes__texto strong {
+/* Camada sobre o canvas. O mouse continua controlando a câmera. */
+#hud-cozy {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    color: var(--hud-ink);
+    font-family: 'Trebuchet MS', system-ui, sans-serif;
     font-size: 14px;
-  }
-
-  .ncca-missoes__texto small {
-    font-size: 9px;
-  }
-
-  .ncca-missoes__seta {
-    display: none;
-  }
-
-  .ncca-inventario {
-    bottom: 25px;
-  }
-
-  .ncca-controles {
-    display: none;
-  }
 }
 
-@media (max-height: 520px) {
-  .ncca-marca {
-    top: 9px;
-  }
-
-  .ncca-horario,
-  .ncca-missoes {
-    top: 85px;
-  }
-
-  .ncca-inventario {
-    bottom: 8px;
-  }
-
-  .ncca-controles {
-    display: none;
-  }
+#hud-cozy *,
+#hud-cozy *::before,
+#hud-cozy *::after {
+    box-sizing: border-box;
 }
 
-@media (prefers-reduced-motion: reduce) {
-
-  .ncca-hud *,
-  .ncca-hud *::before,
-  .ncca-hud *::after {
-    transition: none !important;
-    animation: none !important;
-  }
+#hud-cozy button {
+    font: inherit;
+    cursor: pointer;
+    pointer-events: auto;
 }
 
+#hud-cozy [hidden] {
+    display: none !important;
+}
 
-/* ==========================================
-   HUD NCCA — BORDAS COZY
-   ========================================== */
-
-/* Logo e nome do jogo */
+/* ================= IDENTIDADE ================= */
 .hud-identidade {
+    position: absolute;
+    top: 22px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 15px 10px 10px;
+    background: rgba(255, 248, 237, .97);
     border: 3px solid #7195c0;
-
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.65) inset,
-        0 5px 0 #4e7097,
-        0 10px 22px rgba(20, 40, 65, 0.25);
+    border-radius: 19px;
+    box-shadow: 0 4px 0 #4e7097, 0 10px 20px rgba(20, 40, 65, .20);
 }
 
-/* Logo */
 .hud-logo {
+    display: grid;
+    place-items: center;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
     border: 2px solid #4e7097;
+    border-radius: 12px;
+    background: #7e9cc9;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 800;
     box-shadow: 0 3px 0 #375d89;
 }
 
-/* Relógio */
-.hud-horario {
-    border: 3px solid #e4aa5b;
+.hud-identidade>div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
 
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.65) inset,
-        0 5px 0 #c88b44,
-        0 10px 22px rgba(80, 55, 20, 0.20);
-        
-    top: 130px;
+.hud-identidade small {
+    color: #8191a7;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+}
+
+.hud-identidade strong {
+    color: #40536b;
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+/* ================= HORÁRIO ================= */
+.hud-horario {
+    position: absolute;
+    top: 132px;
     left: 24px;
-}
-
-/* Painel de missões */
-.hud-missoes {
-    border: 3px solid #82b98d;
-
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.65) inset,
-        0 5px 0 #579b69,
-        0 10px 22px rgba(30, 75, 40, 0.22);
-}
-
-/* Inventário */
-.hud-inventario {
-    border: 3px solid #8fa9cf;
-
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.65) inset,
-        0 5px 0 #6687b4,
-        0 10px 25px rgba(30, 50, 85, 0.25);
-}
-
-/* Cada espaço do inventário */
-.hud-slot {
-    border: 3px solid #8fa9cf;
-
-    box-shadow:
-        inset 0 2px 4px rgba(255, 255, 255, 0.6),
-        0 3px 0 rgba(75, 105, 145, 0.45);
-}
-
-/* Espaço selecionado */
-.hud-slot.ativo {
-    border-color: #3e78c1;
-
-    box-shadow:
-        0 0 0 2px #ffffff,
-        0 4px 0 #3e78c1,
-        0 6px 14px rgba(62, 120, 193, 0.35);
-}
-
-.hud-identidade {
-    background: rgba(255, 248, 237, 0.96);
-}
-
-.hud-horario {
-    background: rgba(255, 241, 217, 0.96);
-}
-
-.hud-missoes {
-    background: rgba(232, 242, 228, 0.96);
-}
-
-.hud-inventario {
-    background: rgba(255, 248, 237, 0.96);
-}
-
-
-/* Instrução de interação */
-#hud-interacao {
-    position: fixed;
-
-    left: 50%;
-    bottom: 145px;
-
-    transform: translateX(-50%);
-
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    padding: 11px 16px;
+    font-size: 18px;
+    line-height: 1.2;
+    color: #7a603f;
+    background: rgba(255, 241, 217, .97);
+    border: 3px solid #e4aa5b;
+    border-radius: 14px;
+    box-shadow: 0 4px 0 #c88b44, 0 9px 16px rgba(80, 55, 20, .16);
+    font-weight: 800;
+}
 
-    padding: 10px 16px;
-
-    background: rgba(255, 247, 231, 0.96);
-
-    border: 3px solid #d7a76e;
-    border-radius: 16px;
-
+/* ================= MISSÕES ================= */
+#hud-cozy .hud-missoes {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: min(328px, calc(100vw - 32px));
+    padding: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    color: #395f4b;
+    background: #e3efdc;
+    border: 3px solid #7fb78c;
+    border-radius: 21px;
     box-shadow:
-        0 4px 0 #ac8050,
-        0 8px 20px rgba(0, 0, 0, 0.22);
-
-    color: #65492f;
-    font-family: inherit;
-
-    z-index: 30;
-
+        inset 0 0 0 2px #fffef5,
+        0 5px 0 #55996d,
+        0 12px 24px rgba(31, 68, 42, .22);
     pointer-events: none;
-    user-select: none;
 }
 
-/* Respeita o atributo hidden do HTML */
-#hud-interacao[hidden] {
-    display: none;
-}
-
-/* Representação da tecla E */
-.hud-interacao-tecla {
+/* Cabeçalho: ocupa a mesma largura útil dos cartões; texto centralizado. */
+#hud-cozy #botao-missoes {
+    width: 100%;
+    min-height: 51px;
+    margin: 0;
+    padding: 10px 13px;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 7px;
+    border: 2px solid #bdd5b9;
+    border-radius: 13px;
+    background: linear-gradient(180deg, #fffdf4 0%, #f5f9ee 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), 0 3px 0 #b4cfac;
+    color: #365e48;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.25;
+    letter-spacing: -.12px;
+    text-align: center;
+    white-space: normal;
+    pointer-events: auto;
+    cursor: pointer;
+}
 
+#hud-cozy #botao-missoes:focus-visible {
+    outline: 3px solid #eab56b;
+    outline-offset: 3px;
+}
+
+/* Div central, com largura, espaçamento e cantos proporcionais. */
+#hud-cozy #painel-missoes {
+    margin: 0;
+    padding: 10px;
+    background: #f0f7e9;
+    border: 2px solid #b7d4b6;
+    border-radius: 15px;
+    box-shadow: inset 0 2px 3px rgba(54, 99, 60, .045);
+    pointer-events: none;
+}
+
+#hud-cozy #painel-missoes[hidden] {
+    display: none !important;
+}
+
+#hud-cozy #lista-missoes,
+#hud-cozy .hud-missoes-ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+    margin: 0;
+    padding: 0;
+}
+
+/* Três colunas simétricas: 30px | texto | 30px.
+   O texto fica rigorosamente centralizado no card. */
+#hud-cozy .hud-missao-item {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
+    align-items: center;
+    column-gap: 7px;
+    width: 100%;
+    min-width: 0;
+    min-height: 55px;
+    margin: 0;
+    padding: 9px 10px;
+    border: 2px solid #c9dcc5;
+    border-radius: 12px;
+    background: #fffdf5;
+    box-shadow: inset 0 1px 0 #fff, 0 3px 0 #d3e4cd;
+}
+
+#hud-cozy .hud-missao-item::after {
+    content: "";
+    display: block;
+    grid-column: 3;
+    width: 30px;
+}
+
+#hud-cozy .hud-missao-bolinha {
+    grid-column: 1;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    min-width: 0;
+    margin: 0;
+    border: 2px solid #b3d3b4;
+    border-radius: 9px;
+    background: #e7f3e2;
+    color: #5b966a;
+    box-shadow: 0 2px 0 #cee3c9;
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+#hud-cozy .hud-missao-nome {
+    grid-column: 2;
+    min-width: 0;
+    margin: 0;
+    color: #395f49;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -.05px;
+    line-height: 1.36;
+    text-align: center;
+    text-wrap: pretty;
+    overflow-wrap: break-word;
+}
+
+#hud-cozy .hud-missao-item.concluida {
+    background: #e6f2e2;
+    border-color: #a5cba7;
+    box-shadow: inset 0 1px 0 #f8fff5, 0 3px 0 #b7d6b5;
+}
+
+#hud-cozy .hud-missao-item.concluida .hud-missao-bolinha {
+    background: #77af86;
+    border-color: #57996b;
+    color: #fff;
+    box-shadow: 0 2px 0 #5e9870;
+}
+
+#hud-cozy .hud-missao-item.concluida .hud-missao-nome {
+    color: #53795e;
+    text-decoration: none;
+    opacity: 1;
+}
+
+#hud-cozy .hud-missao-vazia {
+    list-style: none;
+    padding: 12px;
+    text-align: center;
+    color: #6a8c70;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* ================= INVENTÁRIO ================= */
+.hud-inventario {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px;
+    border: 3px solid #8fa9cf;
+    border-radius: 21px;
+    background: rgba(255, 248, 237, .97);
+    box-shadow: 0 5px 0 #6687b4, 0 10px 25px rgba(30, 50, 85, .22);
+}
+
+.hud-slot {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border: 2px solid #9bb5da;
+    border-radius: 14px;
+    background: #e3eefb;
+    color: #5c7ba7;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, .7), 0 3px 0 rgba(75, 105, 145, .3);
+}
+
+.hud-slot:nth-child(2) {
+    background: #ffe7d4;
+    color: #b77950;
+}
+
+.hud-slot:nth-child(3) {
+    background: #eee2fc;
+    color: #9076b3;
+}
+
+.hud-slot:nth-child(4) {
+    background: #e6f2d8;
+    color: #72926b;
+}
+
+.hud-slot.ativo {
+    border-color: #3e78c1;
+    outline: 2px solid #fff;
+    box-shadow: 0 4px 0 #3e78c1, 0 6px 14px rgba(62, 120, 193, .25);
+}
+
+/* ================= MOVIMENTAÇÃO WASD ================= */
+.hud-movimento {
+    position: absolute;
+    left: 24px;
+    bottom: 26px;
+    width: max-content;
+    padding: 12px 14px;
+    border: 3px solid #8fa9cf;
+    border-radius: 18px;
+    background: rgba(255, 248, 237, .96);
+    color: #4c6079;
+    box-shadow: 0 5px 0 #6687b4, 0 10px 20px rgba(25, 40, 70, .2);
+}
+
+.hud-movimento-titulo {
+    display: block;
+    margin-bottom: 8px;
+    color: #7d8ea6;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.hud-wasd {
+    display: grid;
+    grid-template-columns: repeat(3, 34px);
+    grid-template-rows: repeat(2, 34px);
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.hud-tecla {
+    display: grid;
+    place-items: center;
+    background: #e4eefb;
+    border: 2px solid #89a7d2;
+    border-radius: 9px;
+    color: #4e6e99;
+    font-size: 14px;
+    font-weight: 900;
+    box-shadow: 0 2px 0 rgba(102, 135, 180, .5);
+}
+
+.hud-movimento-legenda {
+    display: block;
+    color: #6f7f95;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ================= AVISO E — INTERAGIR ================= */
+#hud-interacao {
+    position: absolute;
+    left: 50%;
+    bottom: 145px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    border: 3px solid #d7a76e;
+    border-radius: 16px;
+    background: rgba(255, 247, 231, .97);
+    box-shadow: 0 4px 0 #ac8050, 0 8px 20px rgba(0, 0, 0, .20);
+    color: #65492f;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.hud-interacao-tecla {
+    display: grid;
+    place-items: center;
     width: 40px;
     height: 40px;
-
-    background: #e2af75;
-
     border: 2px solid #ac8050;
     border-radius: 10px;
-
+    background: #e2af75;
     color: #583e28;
     font-size: 20px;
-    font-weight: bold;
-
+    font-weight: 900;
     box-shadow: 0 3px 0 #ac8050;
 }
 
@@ -737,6 +416,216 @@
 }
 
 .hud-interacao-texto small {
-    font-size: 12px;
     color: #866c53;
+    font-size: 12px;
+}
+
+/* ================= MISSÃO CONCLUÍDA ================= */
+.hud-toast-missao {
+    position: absolute;
+    top: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 260px;
+    max-width: min(360px, calc(100vw - 30px));
+    padding: 14px 16px;
+    border: 3px solid #7db486;
+    border-radius: 18px;
+    background: rgba(234, 248, 228, .98);
+    box-shadow: 0 5px 0 #5f9669, 0 10px 24px rgba(20, 60, 28, .22);
+    color: #3f6349;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.hud-toast-icone {
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 2px solid #7db486;
+    border-radius: 12px;
+    background: #d7efcf;
+    color: #4f8b59;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.hud-toast-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.hud-toast-texto strong {
+    color: #42624c;
+    font-size: 16px;
+}
+
+.hud-toast-texto span {
+    color: #5d7b66;
+    font-size: 14px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.hud-toast-missao.aparecendo {
+    animation: hudToastAparecer 2.6s ease both;
+}
+
+@keyframes hudToastAparecer {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -15px) scale(.96);
+    }
+
+    12% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+
+    85% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -8px) scale(.98);
+    }
+}
+
+/* ================= RESPONSIVIDADE ================= */
+@media (max-width: 720px) {
+    .hud-identidade {
+        top: 12px;
+        left: 12px;
+        padding: 8px;
+    }
+
+    .hud-logo {
+        width: 40px;
+        height: 40px;
+        flex-basis: 40px;
+    }
+
+    .hud-identidade small {
+        font-size: 8px;
+    }
+
+    .hud-identidade strong {
+        font-size: 13px;
+    }
+
+    .hud-horario {
+        top: 91px;
+        left: 12px;
+        font-size: 16px;
+        padding: 9px 12px;
+    }
+
+    #hud-cozy .hud-missoes {
+        top: 24px;
+        right: 12px;
+        width: min(286px, calc(100vw - 24px));
+        padding: 9px;
+        gap: 9px;
+    }
+
+    #hud-cozy #botao-missoes {
+        min-height: 45px;
+        padding: 9px 10px;
+        font-size: 15px;
+    }
+
+    #hud-cozy #painel-missoes {
+        padding: 8px;
+    }
+
+    #hud-cozy .hud-missao-item {
+        min-height: 49px;
+        padding: 8px;
+        grid-template-columns: 26px minmax(0, 1fr) 26px;
+        column-gap: 5px;
+    }
+
+    #hud-cozy .hud-missao-item::after {
+        width: 26px;
+    }
+
+    #hud-cozy .hud-missao-bolinha {
+        width: 26px;
+        height: 26px;
+        font-size: 16px;
+    }
+
+    #hud-cozy .hud-missao-nome {
+        font-size: 13px;
+    }
+
+    .hud-inventario {
+        bottom: 14px;
+        gap: 5px;
+        padding: 7px;
+    }
+
+    .hud-slot {
+        width: 48px;
+        height: 48px;
+    }
+
+    #hud-interacao {
+        bottom: 104px;
+    }
+
+    .hud-movimento {
+        left: 12px;
+        bottom: 14px;
+        padding: 8px;
+    }
+
+    .hud-movimento-legenda,
+    .hud-movimento-titulo {
+        display: none;
+    }
+
+    .hud-wasd {
+        grid-template-columns: repeat(3, 26px);
+        grid-template-rows: repeat(2, 26px);
+        gap: 3px;
+        margin-bottom: 0;
+    }
+
+    .hud-tecla {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hud-movimento {
+        display: none;
+    }
+
+    .hud-identidade {
+        max-width: calc(100vw - 24px);
+    }
+
+    #hud-cozy .hud-missoes {
+        top: 154px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    #hud-cozy *,
+    #hud-cozy *::before,
+    #hud-cozy *::after {
+        animation: none !important;
+        transition: none !important;
+    }
 }
