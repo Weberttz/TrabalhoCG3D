@@ -188,6 +188,8 @@ servidorWebSocket.on('connection', conexao => {
         jogo.receberEntrada(jogador.id, mensagem);
       } else if (mensagem?.tipo === 'acao_task') {
         jogo.receberAcaoTask(jogador.id, mensagem);
+      } else if (mensagem?.tipo === 'interagir') {
+        jogo.interagirComObjetoProximo(jogador.id);
       }
     } catch {
       // Um pacote inválido não deve derrubar o servidor.

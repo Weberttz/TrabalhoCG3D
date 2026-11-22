@@ -54,6 +54,19 @@ export class Sala {
 
         return this.objetos[nomeObjeto];
     }
+
+    criarObjetoInterativo(nomeObjeto, mesh, temColisao = true, funcaoDeInteracao) {
+        if (!this.objetos[nomeObjeto]) {
+            this.objetos[nomeObjeto] = new ObjetoInterativo(
+                nomeObjeto,
+                mesh,
+                temColisao,
+                funcaoDeInteracao
+            );
+        }
+
+        return this.objetos[nomeObjeto];
+    }
 }
 
 export class Objeto {

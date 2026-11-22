@@ -24,7 +24,8 @@ export const MAPA = Object.freeze([
 
                 cor: [0.65, 0.45, 0.30],
                 rotacaoY: 0,
-                solido: true
+                solido: true,
+                interativo: false,
             },
             {
                 nome: 'cadeira01',
@@ -36,7 +37,8 @@ export const MAPA = Object.freeze([
 
                 cor: [0.25, 0.40, 0.65],
                 rotacaoY: 0,
-                solido: true
+                solido: true,
+                interativo: false,
             }
         ]
     },
@@ -64,7 +66,8 @@ export const MAPA = Object.freeze([
 
                 cor: [0.65, 0.45, 0.30],
                 rotacaoY: 0,
-                solido: true
+                solido: true,
+                interativo: true,
             },
             {
                 nome: 'lixeira01',
@@ -76,7 +79,8 @@ export const MAPA = Object.freeze([
 
                 cor: [0.3, 0.3, 0.3],
                 rotacaoY: 0,
-                solido: true
+                solido: true,
+                interativo: true,
             }
         ]
     }

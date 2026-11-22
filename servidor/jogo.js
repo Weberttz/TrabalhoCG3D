@@ -4,6 +4,7 @@ import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
 import { Predio } from '../compartilhado/estruturaPredio.js';
 import { MAPA, obterObjetosMapa } from '../compartilhado/mapa.js';
+import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
 
 const DIRETORIO_ATUAL = path.dirname(
     fileURLToPath(import.meta.url)
@@ -69,11 +70,17 @@ export class Jogo {
 
             const sala = this.andar.salas[descricao.sala];
 
-            const objeto = sala.criarObjeto(
-                descricao.nome,
-                descricao.modelo,
-                descricao.solido
-            );
+            const objeto = descricao.interativo
+              ? sala.criarObjetoInterativo(
+                  descricao.nome,
+                  descricao.modelo,
+                  descricao.solido
+              )
+              : sala.criarObjeto(
+                  descricao.nome,
+                  descricao.modelo,
+                  descricao.solido
+              );
 
             objeto.posicao = {
                 x: descricao.x,
@@ -111,6 +118,29 @@ export class Jogo {
 
             this.instanciasColisao.push(objeto);
         }
+
+        const taskLixo = new TaskJogarLixo({
+            id: 'task_lixo_sala002',
+            jogadorId: null,
+            x: 31.7,
+            z: 10.8
+        });
+        this.tasks.set(taskLixo.id, taskLixo);
+
+        // 1. Interagir com a mesa atribui a task ao jogador (muda para EM_ANDAMENTO)
+        this.definirFuncaoInteracao('Sala002', 'mesaEstudo01', (objeto, jogador) => {
+            if (taskLixo.status === 'pendente') {
+                console.log(`[Task ${taskLixo.id}] Jogador ${jogador.id} pegou o lixo da mesa!`);
+                taskLixo.atribuirPara(jogador);
+            } else {
+                console.log(`[Task ${taskLixo.id}] Mesa já utilizada (status atual: ${taskLixo.status}).`);
+            }
+        });
+
+        // 2. Interagir com a lixeira conclui a task (muda para CONCLUIDA)
+        this.definirFuncaoInteracao('Sala002', 'lixeira01', (objeto, jogador) => {
+            taskLixo.descartarLixo(jogador);
+        });
 
         this.inicializado = true;
     }
@@ -213,7 +243,11 @@ export class Jogo {
 
         for (const [taskId, task] of this.tasks.entries()) {
             if (task.jogadorId === id) {
-                this.tasks.delete(taskId);
+                if (task.id === 'task_lixo_sala002') {
+                    task.liberar();
+                } else {
+                    this.tasks.delete(taskId);
+                }
             }
         }
     }
@@ -308,6 +342,56 @@ export class Jogo {
         }
 
         return task.processarAcao(jogador, mensagem);
+    }
+
+    interagirComObjetoProximo(jogadorId, raioMaximo = 2.0) {
+        const jogador = this.jogadores.get(jogadorId);
+        if (!jogador) return false;
+
+        const andar = this.predio.andares[jogador.andar];
+        if (!andar) return false;
+
+        let objetoMaisProximo = null;
+        let menorDistancia = raioMaximo;
+
+        for (const sala of Object.values(andar.salas)) {
+            for (const objeto of Object.values(sala.objetos)) {
+                if (typeof objeto.interagir !== 'function') continue;
+
+                let alvoX = objeto.posicao.x;
+                let alvoZ = objeto.posicao.z;
+
+                if (objeto.aabb && objeto.aabb.length > 0) {
+                    const caixa = objeto.aabb[0];
+                    alvoX += (caixa.minimoX + caixa.maximoX) / 2;
+                    alvoZ += (caixa.minimoZ + caixa.maximoZ) / 2;
+                }
+
+                const distancia = Math.hypot(jogador.x - alvoX, jogador.z - alvoZ);
+
+                if (distancia <= menorDistancia) {
+                    menorDistancia = distancia;
+                    objetoMaisProximo = objeto;
+                }
+            }
+        }
+
+        if (!objetoMaisProximo) {
+            console.log(`[Jogo] Jogador ${jogadorId} apertou 'E', mas não há objeto interativo por perto.`);
+            return false;
+        }
+
+        console.log(`[Jogo] Jogador ${jogadorId} interagiu com "${objetoMaisProximo.nome}" (distância: ${menorDistancia.toFixed(2)}m)`);
+        objetoMaisProximo.interagir(jogador);
+        return true;
+    }
+
+    definirFuncaoInteracao(nomeSala, nomeObjeto, funcaoDeInteracao) {
+        const objeto = this.andar.salas[nomeSala]?.objetos[nomeObjeto];
+        if (!objeto || typeof objeto.interagir !== 'function') return false;
+
+        objeto.acao = funcaoDeInteracao;
+        return true;
     }
 
     // Validação de colisão
