@@ -1,6 +1,6 @@
 import { obterObjetosMapa } from './mapa.js';
-import { lerTeclas } from "./teclado.js";
-import { enviarTeclas, obterSessao } from "./rede.js";
+import { lerTeclas, configurarInteracao } from "./teclado.js";
+import { enviarTeclas, enviarInteracao, obterSessao } from "./rede.js";
 import { criarRenderizador } from "./renderizador.js";
 import { iniciarMouse, obterOrientacao } from "./mouse.js";
 import { leitorOBJ } from "./leitorOBJ.js";
@@ -46,6 +46,9 @@ async function iniciarJogo() {
     modelos,
   );
   iniciarMouse(document.getElementById("jogo"));
+  configurarInteracao(() => {
+    enviarInteracao();
+  });
   const textoSituacao = document.getElementById("situacao");
   const textoIdentidade = document.getElementById("identidade");
   const textoQuantidade = document.getElementById("quantidade");

@@ -42,6 +42,11 @@ export function enviarTeclas(teclas, anguloHorizontal) {
   }));
 }
 
+export function enviarInteracao() {
+  if (conexao.readyState !== WebSocket.OPEN || meuId === null) return;
+  conexao.send(JSON.stringify({ tipo: 'interagir' }));
+}
+
 export function obterSessao() {
   return { meuId, estado, situacao };
 }
