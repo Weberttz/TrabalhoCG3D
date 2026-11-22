@@ -1,4 +1,5 @@
 import { obterObjetosMapa } from './mapa.js';
+import { Mesh } from './mesh.js';
 const SHADER_VERTICE = `#version 300 es
 in vec3 aPosicao;
 uniform mat4 uMatrizMVP;
@@ -130,41 +131,42 @@ export function criarRenderizador(canvas, modelos = {}) {
   if (!gl) throw new Error('WebGL2 não disponível neste navegador');
 
   const programa = criarPrograma(gl);
-  const atributoPosicao = gl.getAttribLocation(programa, 'aPosicao');
+
+  //pega a localizacao dos atributos que serao usados pela mesh p/ conectar os buffers
+  const localAtributos = {
+    attribLocations : {
+      vertexPosition: gl.getAttribLocation(programa, 'aPosicao'),
+      textureCoord : gl.getAttribLocation(programa, 'aTextura'),
+      vertexNormal : gl.getAttribLocation(programa, 'aNormal')
+    }
+  }
   const uniformeMatriz = gl.getUniformLocation(programa, 'uMatrizMVP');
   const uniformeCor = gl.getUniformLocation(programa, 'uCor');
 
-  function enviarVertices(vertices) {
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    return { buffer, quantidade: vertices.length / 3 };
-  }
+  const cubo = new Mesh(gl, verticesCubo(), null, null)
+  
+  const malhasOBJ = {}
 
-  const cubo = enviarVertices(verticesCubo());
-
-  const buffersOBJ = {}
-
+  //cria e armazena uma mesh p/ cada obj carregado
   for (const chave in modelos) {
     const modelo = modelos[chave]
     
     if (modelo && modelo.posicoes && modelo.posicoes.length > 0){
-      buffersOBJ[chave] = enviarVertices(modelo.posicoes)
+      malhasOBJ[chave] = new Mesh(gl, modelo.posicoes, modelo.texturas, modelo.normais)
     }
   }
 
   // Geometria e cores do quarto são importadas, não ficam espalhadas aqui.
   const objetos = obterObjetosMapa();
   gl.useProgram(programa);
-  gl.enableVertexAttribArray(atributoPosicao);
+  // gl.enableVertexAttribArray(atributoPosicao);
   gl.enable(gl.DEPTH_TEST);
 
-  function desenharMalha(malha, modo, matriz, cor) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, malha.buffer);
-    gl.vertexAttribPointer(atributoPosicao, 3, gl.FLOAT, false, 0, 0);
+  function desenharMalha(malha, matriz, cor) {
     gl.uniformMatrix4fv(uniformeMatriz, false, matriz);
     gl.uniform3fv(uniformeCor, cor);
-    gl.drawArrays(modo, 0, malha.quantidade);
+
+    malha.desenhar(localAtributos)
   }
 
   return {
@@ -198,7 +200,7 @@ export function criarRenderizador(canvas, modelos = {}) {
       const camera = multiplicar(projecao, olharPara(olho, alvo));
 
       for (const objeto of objetos) {
-          const malhaOBJ = buffersOBJ[objeto.modelo];
+          const malhaOBJ = malhasOBJ[objeto.modelo];
 
           if (!malhaOBJ) {
               console.warn(
@@ -232,7 +234,6 @@ export function criarRenderizador(canvas, modelos = {}) {
 
           desenharMalha(
               malhaOBJ,
-              gl.TRIANGLES,
               matrizFinal,
               objeto.cor ?? [0.7, 0.7, 0.7]
           );  
@@ -243,7 +244,7 @@ export function criarRenderizador(canvas, modelos = {}) {
         const modelo = translacao(jogador.x, 0.4, jogador.z);
         const cor = jogador.cubo === 0
           ? [0.16, 0.76, 0.94] : [1.0, 0.57, 0.22];
-        desenharMalha(cubo, gl.TRIANGLES, multiplicar(camera, modelo), cor);
+        desenharMalha(cubo, multiplicar(camera, modelo), cor);
       }
     },
   };
