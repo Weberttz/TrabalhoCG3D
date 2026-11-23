@@ -11,28 +11,26 @@ async function carregarModelos() {
     const modelos = {};
 
     // Obtém os nomes dos modelos, sem duplicatas.
-    const nomesModelos = [
-        ...new Set(
-            obterObjetosMapa()
-                .map(objeto => objeto.modelo)
-                .filter(Boolean)
-        )
-    ];
+    const nomesModelos = new Set(
+    obterObjetosMapa()
+        .map(objeto => objeto.modelo)
+        .filter(Boolean)
+    );
+
+    // Modelos dos personagens
+    nomesModelos.add('personagem.obj');
 
     // Carrega os modelos em paralelo.
     await Promise.all(
-        nomesModelos.map(async nome => {
+        [...nomesModelos].map(async nome => {
             try {
                 modelos[nome] = await leitorOBJ.carregarArquivo(
                     `./modelosOBJ/${nome}`
                 );
 
-                console.log(`[Renderer] Modelo carregado: ${nome}`);
+                console.log(`Modelo carregado: ${nome}`);
             } catch (erro) {
-                console.error(
-                    `[Renderer] Erro ao carregar ${nome}:`,
-                    erro
-                );
+                console.error(`Erro ao carregar ${nome}:`, erro);
             }
         })
     );

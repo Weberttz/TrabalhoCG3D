@@ -125,6 +125,15 @@ function modeloCaixa(x, y, z, largura, altura, profundidade) {
   ]);
 }
 
+function escalaUniforme(s) {
+    return new Float32Array([
+        s, 0, 0, 0,
+        0, s, 0, 0,
+        0, 0, s, 0,
+        0, 0, 0, 1
+    ]);
+}
+
 export function criarRenderizador(canvas, modelos = {}) {
   const gl = canvas.getContext('webgl2', { antialias: true });
   if (!gl) throw new Error('WebGL2 não disponível neste navegador');
@@ -238,13 +247,61 @@ export function criarRenderizador(canvas, modelos = {}) {
           );  
       }
 
+      
       for (const jogador of jogadores) {
-        if (jogador.id === meuId) continue;
-        const modelo = translacao(jogador.x, 0.4, jogador.z);
-        const cor = jogador.cubo === 0
-          ? [0.16, 0.76, 0.94] : [1.0, 0.57, 0.22];
-        desenharMalha(cubo, gl.TRIANGLES, multiplicar(camera, modelo), cor);
-      }
+          // Não desenha nosso personagem em primeira pessoa.
+          if (jogador.id === meuId) continue;
+
+          // Seleciona um modelo para cada jogador.
+          const nomeModelo = jogador.cubo === 0
+              ? 'personagem.obj'
+              : 'personagem_sueter.obj';
+
+          const malha = buffersOBJ[nomeModelo];
+
+          if (malha) {
+              // Posição do jogador no mapa.
+              const posicao = translacao(
+                  jogador.x,
+                  0,
+                  jogador.z
+              );
+
+              // Ajuste inicial do tamanho do personagem.
+              const escala = escalaUniforme(0.75);
+
+              const matrizModelo = multiplicar(
+                  posicao,
+                  escala
+              );
+
+              desenharMalha(
+                  malha,
+                  gl.TRIANGLES,
+                  multiplicar(camera, matrizModelo),
+                  [1, 1, 1]
+              );
+
+            } else {
+                // Mantém o cubo como fallback.
+                const matrizModelo = translacao(
+                    jogador.x,
+                    0.4,
+                    jogador.z
+                );
+
+                const cor = jogador.cubo === 0
+                    ? [0.16, 0.76, 0.94]
+                    : [1.0, 0.57, 0.22];
+
+                desenharMalha(
+                    cubo,
+                    gl.TRIANGLES,
+                    multiplicar(camera, matrizModelo),
+                    cor
+                );
+            }
+        }
     },
   };
 }
