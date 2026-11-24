@@ -60,21 +60,32 @@ void main() {
     float lightp = dot(v_normal_n, pToLight);
     float lighte = dot(v_normal_n, halfVec);
 
+    float distanciaLuz = length(vDirecaoLuz);
+    float a = 1.0;
+    float b = 0.01;
+    float c = 0.001;
+
+    float atenuacao = 1.0 / (
+      a + b * distanciaLuz + c * distanciaLuz * distanciaLuz
+    );
+
     if (lightd < 0.0) lightd = 0.0;
     if (lightp < 0.0) lightp = 0.0;
     if (lighte < 0.0) lighte = 0.0;
 
     // Luz ambiente
-    vec3 resultado = 0.2 * uCorLuz * corMaterial;
+    vec3 resultado = 0.3 * uCorLuz * corMaterial;
 
     // Luz distante - difusa
     resultado += 0.2 * uCorLuz * lightd * corMaterial;
 
     // Luz pontual - difusa
-    resultado += 0.5 * uCorLuz * lightp * corMaterial;
+    resultado += 0.8 * uCorLuz * lightp * corMaterial  * atenuacao;
 
     // Luz especular
-    resultado += uCorLuz * pow(lighte, 500.0) * corMaterial;
+    if (lightp > 0.0) {
+      resultado += 0.15 * uCorLuz * pow(lighte, 100.0) * atenuacao;
+    }
 
     corFinal = vec4(resultado, 1.0);
 }
@@ -233,7 +244,9 @@ function modeloCaixa(x, y, z, largura, altura, profundidade) {
 
 export function criarRenderizador(canvas, modelos = {}) {
   const caminhosTexturas = {
-    "sala001.obj": "/texturas/textura_madeira.jpg",
+    "office-desk.obj": "/texturas/textura_madeira.jpg",
+    "office-chair.obj": "/texturas/office-chair_body_basecolor.jpg",
+    "ceiling-lamp.obj": "/texturas/ceiling-lamp_body_basecolor.jpg",
   };
 
   const gl = canvas.getContext("webgl2", { antialias: true });
@@ -292,9 +305,9 @@ export function criarRenderizador(canvas, modelos = {}) {
   gl.useProgram(programa);
   // gl.enableVertexAttribArray(atributoPosicao);
   gl.enable(gl.DEPTH_TEST);
-  gl.uniform3fv(uniformePosicaoLuz, [27.4, 3, 9.5]);
-  gl.uniform3fv(uniformeCorLuz, [1.0, 1.0, 1.0]);
-  gl.uniform3fv(uniformeDirecaoLuz, [0.0, -1.0, 0.0]);
+  gl.uniform3fv(uniformePosicaoLuz, [30.0, 3.0, 8.0]); //posicao da luz pontual
+  gl.uniform3fv(uniformeCorLuz, [1.0, 1.0, 1.0]); //cor da luz
+  gl.uniform3fv(uniformeDirecaoLuz, [0.0, -1.0, 0.0]);//direcao da luz direcional
 
   function desenharMalha(malha, matrizFinal, matrizModelo, cor, textura) {
     gl.uniformMatrix4fv(uniformeMatriz, false, matrizFinal);
