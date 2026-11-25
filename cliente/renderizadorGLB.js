@@ -1,19 +1,34 @@
+/**
+ * Renderizador de personagens GLB.
+ *
+ * Suporta:
+ * - Skinning com até 48 ossos
+ * - Textura de cor incorporada ao GLB
+ * - Coordenadas UV
+ * - Materiais individuais
+ * - Iluminação difusa
+ * - Vários jogadores com animações independentes
+ */
 
 const MAX_OSSOS = 48;
+
+// Vertex Shader
 
 const VERTICE = `#version 300 es
 precision highp float;
 
-layout(location=0) in vec3 aPosicao;
-layout(location=1) in vec3 aNormal;
-layout(location=2) in vec4 aOssos;
-layout(location=3) in vec4 aPesos;
+layout(location = 0) in vec3 aPosicao;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec4 aOssos;
+layout(location = 3) in vec4 aPesos;
+layout(location = 4) in vec2 aUV;
 
 uniform mat4 uMVP;
 uniform mat4 uModelo;
-uniform mat4 uOssos[48];
+uniform mat4 uOssos[${MAX_OSSOS}];
 
 out vec3 vNormal;
+out vec2 vUV;
 
 void main() {
     mat4 pele =
@@ -22,29 +37,62 @@ void main() {
         + aPesos.z * uOssos[int(aOssos.z)]
         + aPesos.w * uOssos[int(aOssos.w)];
 
-    gl_Position = uMVP * pele * vec4(aPosicao, 1.0);
+    vec4 posicaoAnimada =
+        pele * vec4(aPosicao, 1.0);
+
+    gl_Position = uMVP * posicaoAnimada;
+
     vNormal = mat3(uModelo * pele) * aNormal;
+
+    vUV = aUV;
 }
 `;
+
+// Fragment Shader
 
 const FRAGMENTO = `#version 300 es
 precision highp float;
 
 in vec3 vNormal;
+in vec2 vUV;
+
 uniform vec3 uCor;
+uniform bool uUsarTextura;
+uniform sampler2D uTextura;
 
 out vec4 corFinal;
 
 void main() {
     vec3 normal = normalize(vNormal);
-    vec3 luz = normalize(vec3(0.35, 0.9, 0.45));
+
+    vec3 luz = normalize(
+        vec3(0.35, 0.9, 0.45)
+    );
 
     float intensidade =
-        0.45 + 0.55 * max(dot(normal, luz), 0.0);
+        0.45 +
+        0.55 * max(
+            dot(normal, luz),
+            0.0
+        );
 
-    corFinal = vec4(uCor * intensidade, 1.0);
+    vec3 corBase = uCor;
+
+    if (uUsarTextura) {
+        corBase *= texture(
+            uTextura,
+            vUV
+        ).rgb;
+    }
+
+    corFinal = vec4(
+        corBase * intensidade,
+        1.0
+    );
 }
 `;
+
+// Shaders e programa
 
 function compilar(gl, tipo, fonte) {
     const shader = gl.createShader(tipo);
@@ -52,18 +100,36 @@ function compilar(gl, tipo, fonte) {
     gl.shaderSource(shader, fonte);
     gl.compileShader(shader);
 
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    if (
+        !gl.getShaderParameter(
+            shader,
+            gl.COMPILE_STATUS
+        )
+    ) {
         const erro = gl.getShaderInfoLog(shader);
+
         gl.deleteShader(shader);
-        throw new Error(`Shader GLB: ${erro}`);
+
+        throw new Error(
+            `Shader GLB: ${erro}`
+        );
     }
 
     return shader;
 }
 
 function criarPrograma(gl) {
-    const vs = compilar(gl, gl.VERTEX_SHADER, VERTICE);
-    const fs = compilar(gl, gl.FRAGMENT_SHADER, FRAGMENTO);
+    const vs = compilar(
+        gl,
+        gl.VERTEX_SHADER,
+        VERTICE
+    );
+
+    const fs = compilar(
+        gl,
+        gl.FRAGMENT_SHADER,
+        FRAGMENTO
+    );
 
     const programa = gl.createProgram();
 
@@ -75,40 +141,100 @@ function criarPrograma(gl) {
     gl.deleteShader(vs);
     gl.deleteShader(fs);
 
-    if (!gl.getProgramParameter(programa, gl.LINK_STATUS)) {
-        const erro = gl.getProgramInfoLog(programa);
+    if (
+        !gl.getProgramParameter(
+            programa,
+            gl.LINK_STATUS
+        )
+    ) {
+        const erro = gl.getProgramInfoLog(
+            programa
+        );
+
         gl.deleteProgram(programa);
-        throw new Error(`Programa GLB: ${erro}`);
+
+        throw new Error(
+            `Programa GLB: ${erro}`
+        );
     }
 
     return programa;
 }
 
-export function criarDesenhadorGLB(gl, modeloGLB) {
-    const skin = modeloGLB.esqueletos?.[0];
+// Renderizador de glb
+
+export function criarDesenhadorGLB(
+    gl,
+    modeloGLB
+) {
+    const skin =
+        modeloGLB.esqueletos?.[0];
 
     if (!skin?.joints?.length) {
-        throw new Error('GLB sem esqueleto válido.');
+        throw new Error(
+            'O GLB não possui um esqueleto válido.'
+        );
     }
 
     if (skin.joints.length > MAX_OSSOS) {
-        throw new Error('Quantidade de ossos excedida.');
+        throw new Error(
+            `O GLB tem ${skin.joints.length} ossos; ` +
+            `o shader admite até ${MAX_OSSOS}.`
+        );
     }
 
     const programa = criarPrograma(gl);
 
-    const uMVP = gl.getUniformLocation(programa, 'uMVP');
-    const uModelo = gl.getUniformLocation(programa, 'uModelo');
-    const uOssos = gl.getUniformLocation(programa, 'uOssos[0]');
-    const uCor = gl.getUniformLocation(programa, 'uCor');
+    const uMVP = gl.getUniformLocation(
+        programa,
+        'uMVP'
+    );
 
+    const uModelo = gl.getUniformLocation(
+        programa,
+        'uModelo'
+    );
+
+    const uOssos = gl.getUniformLocation(
+        programa,
+        'uOssos[0]'
+    );
+
+    const uCor = gl.getUniformLocation(
+        programa,
+        'uCor'
+    );
+
+    const uUsarTextura = gl.getUniformLocation(
+        programa,
+        'uUsarTextura'
+    );
+
+    const uTextura = gl.getUniformLocation(
+        programa,
+        'uTextura'
+    );
+
+    const texturas = new Map();
     const recursos = [];
-    let menorY = Infinity;
 
-    function atributo(local, dados, componentes) {
+    let menorY = Infinity;
+    let destruido = false;
+
+    // Buffers
+
+    function atributo(
+        local,
+        dados,
+        componentes
+    ) {
         const buffer = gl.createBuffer();
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bindBuffer(
+            gl.ARRAY_BUFFER,
+            buffer
+        );
+
         gl.bufferData(
             gl.ARRAY_BUFFER,
             dados,
@@ -116,36 +242,257 @@ export function criarDesenhadorGLB(gl, modeloGLB) {
         );
 
         gl.enableVertexAttribArray(local);
+
         gl.vertexAttribPointer(
-            local, componentes,
-            gl.FLOAT, false, 0, 0
+            local,
+            componentes,
+            gl.FLOAT,
+            false,
+            0,
+            0
         );
 
         return buffer;
     }
 
+    // Texturar incorporadas no arquivo glb
+
+    function carregarTextura(indiceTextura) {
+        if (indiceTextura == null) {
+            return null;
+        }
+
+        if (texturas.has(indiceTextura)) {
+            return texturas.get(indiceTextura);
+        }
+
+
+        const definicaoTextura =
+            modeloGLB.json.textures?.[indiceTextura];
+
+        // Suporta referências padrão e EXT_texture_webp.
+        const indiceImagem =
+            definicaoTextura?.source ??
+            definicaoTextura?.extensions
+                ?.EXT_texture_webp?.source;
+
+        const definicaoImagem =
+            indiceImagem != null
+                ? modeloGLB.json.images?.[indiceImagem]
+                : null;
+
+        if (
+            !definicaoImagem ||
+            definicaoImagem.bufferView == null ||
+            !modeloGLB.binario
+        ) {
+            console.warn(
+                'Imagem interna não disponível:',
+                indiceTextura
+            );
+
+            return null;
+        }
+
+        const vista =
+            modeloGLB.json.bufferViews[
+            definicaoImagem.bufferView
+            ];
+
+        if (!vista) {
+            return null;
+        }
+
+        const textura = gl.createTexture();
+
+        const recurso = {
+            textura,
+            pronta: false
+        };
+
+        texturas.set(
+            indiceTextura,
+            recurso
+        );
+
+        // Guarda o estado da textura atual.
+        const unidadeAnterior = gl.getParameter(
+            gl.ACTIVE_TEXTURE
+        );
+
+        gl.activeTexture(gl.TEXTURE0);
+
+        const texturaAnterior = gl.getParameter(
+            gl.TEXTURE_BINDING_2D
+        );
+
+        gl.bindTexture(
+            gl.TEXTURE_2D,
+            textura
+        );
+
+        // Pixel temporário branco.
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            1,
+            1,
+            0,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            new Uint8Array([
+                255, 255, 255, 255
+            ])
+        );
+
+        gl.texParameteri(
+            gl.TEXTURE_2D,
+            gl.TEXTURE_WRAP_S,
+            gl.REPEAT
+        );
+
+        gl.texParameteri(
+            gl.TEXTURE_2D,
+            gl.TEXTURE_WRAP_T,
+            gl.REPEAT
+        );
+
+        // Usa filtro linear antes do mipmap.
+        gl.texParameteri(
+            gl.TEXTURE_2D,
+            gl.TEXTURE_MIN_FILTER,
+            gl.LINEAR
+        );
+
+        gl.texParameteri(
+            gl.TEXTURE_2D,
+            gl.TEXTURE_MAG_FILTER,
+            gl.LINEAR
+        );
+
+        gl.bindTexture(
+            gl.TEXTURE_2D,
+            texturaAnterior
+        );
+
+        gl.activeTexture(unidadeAnterior);
+
+        // Lê os bytes da imagem no buffer BIN.
+        const inicio = vista.byteOffset ?? 0;
+
+        const bytes = modeloGLB.binario.slice(
+            inicio,
+            inicio + vista.byteLength
+        );
+
+        const blob = new Blob(
+            [bytes],
+            {
+                type:
+                    definicaoImagem.mimeType ??
+                    'image/png'
+            }
+        );
+
+        // Decodifica a imagem incorporada.
+        createImageBitmap(blob)
+            .then(imagem => {
+                if (destruido) {
+                    imagem.close();
+                    return;
+                }
+
+                const unidadeAtiva =
+                    gl.getParameter(
+                        gl.ACTIVE_TEXTURE
+                    );
+
+                gl.activeTexture(gl.TEXTURE0);
+
+                const texturaVinculada =
+                    gl.getParameter(
+                        gl.TEXTURE_BINDING_2D
+                    );
+
+                gl.bindTexture(
+                    gl.TEXTURE_2D,
+                    textura
+                );
+
+                gl.texImage2D(
+                    gl.TEXTURE_2D,
+                    0,
+                    gl.RGBA,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    imagem
+                );
+
+                gl.generateMipmap(
+                    gl.TEXTURE_2D
+                );
+
+                gl.texParameteri(
+                    gl.TEXTURE_2D,
+                    gl.TEXTURE_MIN_FILTER,
+                    gl.LINEAR_MIPMAP_LINEAR
+                );
+
+                gl.bindTexture(
+                    gl.TEXTURE_2D,
+                    texturaVinculada
+                );
+
+                gl.activeTexture(
+                    unidadeAtiva
+                );
+
+                imagem.close();
+
+                recurso.pronta = true;
+            })
+            .catch(erro => {
+                console.error(
+                    'Falha ao carregar textura GLB:',
+                    erro
+                );
+            });
+
+        return recurso;
+    }
+
+    // Preparação das malhas
+
     for (const malha of modeloGLB.malhas) {
         for (const primitiva of malha.primitivas) {
             if (primitiva.modo !== 4) {
                 throw new Error(
-                    'O renderizador aceita apenas triângulos.'
+                    'São aceitos apenas triângulos.'
                 );
             }
 
-            if (!primitiva.posicoes ||
+            if (
+                !primitiva.posicoes ||
                 !primitiva.ossos ||
-                !primitiva.pesos) {
+                !primitiva.pesos
+            ) {
                 throw new Error(
-                    'Malha sem atributos de skinning.'
+                    'Malha GLB sem atributos de skinning.'
                 );
             }
 
-            const quantidade = primitiva.posicoes.length / 3;
+            const quantidade =
+                primitiva.posicoes.length / 3;
 
-            if (primitiva.ossos.length !== quantidade * 4 ||
-                primitiva.pesos.length !== quantidade * 4) {
+            if (
+                primitiva.ossos.length !==
+                quantidade * 4 ||
+                primitiva.pesos.length !==
+                quantidade * 4
+            ) {
                 throw new Error(
-                    'Quantidade de pesos ou ossos inválida.'
+                    'Quantidade inválida de pesos ou ossos.'
                 );
             }
 
@@ -161,40 +508,71 @@ export function criarDesenhadorGLB(gl, modeloGLB) {
             }
 
             const vao = gl.createVertexArray();
+
             gl.bindVertexArray(vao);
 
             const buffers = [];
 
-            buffers.push(
-                atributo(0, primitiva.posicoes, 3)
-            );
-
+            // Posições.
             buffers.push(
                 atributo(
-                    1,
-                    primitiva.normais ??
-                        new Float32Array(primitiva.posicoes.length),
+                    0,
+                    primitiva.posicoes,
                     3
                 )
             );
 
+            // Normais.
             buffers.push(
-                atributo(2, primitiva.ossos, 4)
+                atributo(
+                    1,
+                    primitiva.normais ??
+                    new Float32Array(
+                        primitiva.posicoes.length
+                    ),
+                    3
+                )
             );
 
+            // Índices dos ossos.
             buffers.push(
-                atributo(3, primitiva.pesos, 4)
+                atributo(
+                    2,
+                    primitiva.ossos,
+                    4
+                )
+            );
+
+            // Pesos dos ossos.
+            buffers.push(
+                atributo(
+                    3,
+                    primitiva.pesos,
+                    4
+                )
+            );
+
+            // Coordenadas UV.
+            buffers.push(
+                atributo(
+                    4,
+                    primitiva.uv ??
+                    new Float32Array(
+                        quantidade * 2
+                    ),
+                    2
+                )
             );
 
             let totalIndices = 0;
 
             if (primitiva.indices) {
-                // O leitorGLB retorna índices como Float32Array.
                 const indices = Uint32Array.from(
                     primitiva.indices
                 );
 
-                const bufferIndices = gl.createBuffer();
+                const bufferIndices =
+                    gl.createBuffer();
 
                 gl.bindBuffer(
                     gl.ELEMENT_ARRAY_BUFFER,
@@ -208,71 +586,153 @@ export function criarDesenhadorGLB(gl, modeloGLB) {
                 );
 
                 buffers.push(bufferIndices);
+
                 totalIndices = indices.length;
             }
 
+            // Material associado à primitiva.
             const material =
-                modeloGLB.json.materials?.[primitiva.material];
+                modeloGLB.json.materials?.[
+                primitiva.material
+                ];
 
             const cor = (
-                material?.pbrMetallicRoughness?.baseColorFactor
-                ?? [0.78, 0.8, 0.84, 1]
+                material?.pbrMetallicRoughness
+                    ?.baseColorFactor ??
+                [1, 1, 1, 1]
             ).slice(0, 3);
+
+            const indiceTextura =
+                material?.pbrMetallicRoughness
+                    ?.baseColorTexture?.index;
+
+            const texturaCor = carregarTextura(
+                indiceTextura
+            );
 
             recursos.push({
                 vao,
                 buffers,
                 quantidade,
                 totalIndices,
-                cor
+                cor,
+                texturaCor
             });
         }
     }
 
     gl.bindVertexArray(null);
 
-    return {
-        deslocamentoSolo: Number.isFinite(menorY)
-            ? -menorY
-            : 0,
+    // Interface do renderizador
 
-        desenhar(mvp, matrizModelo, matrizesOssos) {
+    return {
+        deslocamentoSolo:
+            Number.isFinite(menorY)
+                ? -menorY
+                : 0,
+
+        desenhar(
+            mvp,
+            matrizModelo,
+            matrizesOssos
+        ) {
+            if (destruido) {
+                return;
+            }
+
+            const quantidadeEsperada =
+                skin.joints.length * 16;
+
             if (
                 !matrizesOssos ||
-                matrizesOssos.length !== skin.joints.length * 16
+                matrizesOssos.length !==
+                quantidadeEsperada
             ) {
                 throw new Error(
                     'Matrizes dos ossos inválidas.'
                 );
             }
 
+            // Preserva o estado WebGL do cenário.
             const programaAnterior =
-                gl.getParameter(gl.CURRENT_PROGRAM);
+                gl.getParameter(
+                    gl.CURRENT_PROGRAM
+                );
 
             const vaoAnterior =
-                gl.getParameter(gl.VERTEX_ARRAY_BINDING);
+                gl.getParameter(
+                    gl.VERTEX_ARRAY_BINDING
+                );
 
             const cullingAnterior =
-                gl.isEnabled(gl.CULL_FACE);
+                gl.isEnabled(
+                    gl.CULL_FACE
+                );
+
+            const unidadeAnterior =
+                gl.getParameter(
+                    gl.ACTIVE_TEXTURE
+                );
+
+            gl.activeTexture(gl.TEXTURE0);
+
+            const texturaAnterior =
+                gl.getParameter(
+                    gl.TEXTURE_BINDING_2D
+                );
 
             gl.disable(gl.CULL_FACE);
+
             gl.useProgram(programa);
 
-            gl.uniformMatrix4fv(
-                uMVP, false, mvp
+            gl.uniform1i(
+                uTextura,
+                0
             );
 
             gl.uniformMatrix4fv(
-                uModelo, false, matrizModelo
+                uMVP,
+                false,
+                mvp
             );
 
             gl.uniformMatrix4fv(
-                uOssos, false, matrizesOssos
+                uModelo,
+                false,
+                matrizModelo
             );
 
+            gl.uniformMatrix4fv(
+                uOssos,
+                false,
+                matrizesOssos
+            );
+
+            // Desenha cada parte do personagem.
             for (const parte of recursos) {
-                gl.bindVertexArray(parte.vao);
-                gl.uniform3fv(uCor, parte.cor);
+                gl.bindVertexArray(
+                    parte.vao
+                );
+
+                gl.uniform3fv(
+                    uCor,
+                    parte.cor
+                );
+
+                const pronta =
+                    parte.texturaCor?.pronta === true;
+
+                gl.uniform1i(
+                    uUsarTextura,
+                    pronta ? 1 : 0
+                );
+
+                gl.bindTexture(
+                    gl.TEXTURE_2D,
+                    pronta
+                        ? parte.texturaCor.textura
+                        : null
+                );
 
                 if (parte.totalIndices > 0) {
                     gl.drawElements(
@@ -290,8 +750,21 @@ export function criarDesenhadorGLB(gl, modeloGLB) {
                 }
             }
 
+            // Restaura o estado anterior.
             gl.bindVertexArray(vaoAnterior);
-            gl.useProgram(programaAnterior);
+
+            gl.bindTexture(
+                gl.TEXTURE_2D,
+                texturaAnterior
+            );
+
+            gl.activeTexture(
+                unidadeAnterior
+            );
+
+            gl.useProgram(
+                programaAnterior
+            );
 
             if (cullingAnterior) {
                 gl.enable(gl.CULL_FACE);
@@ -299,12 +772,22 @@ export function criarDesenhadorGLB(gl, modeloGLB) {
         },
 
         destruir() {
+            destruido = true;
+
             for (const parte of recursos) {
                 for (const buffer of parte.buffers) {
                     gl.deleteBuffer(buffer);
                 }
 
-                gl.deleteVertexArray(parte.vao);
+                gl.deleteVertexArray(
+                    parte.vao
+                );
+            }
+
+            for (const recurso of texturas.values()) {
+                gl.deleteTexture(
+                    recurso.textura
+                );
             }
 
             gl.deleteProgram(programa);
