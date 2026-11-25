@@ -1,44 +1,62 @@
-import { obterObjetosMapa, obterObjetoInterativoProximo } from './mapa.js';
-import { lerTeclas, configurarInteracao } from "./teclado.js";
-import { enviarTeclas, enviarInteracao, obterSessao } from "./rede.js";
-import { criarRenderizador } from "./renderizador.js";
-import { iniciarMouse, obterOrientacao } from "./mouse.js";
-import { leitorOBJ } from "./leitorOBJ.js";
+
+import {
+    obterObjetosMapa,
+    obterObjetoInterativoProximo
+} from './mapa.js';
+
+import {
+    lerTeclas,
+    configurarInteracao
+} from './teclado.js';
+
+import {
+    enviarTeclas,
+    enviarInteracao,
+    obterSessao
+} from './rede.js';
+
+import { criarRenderizador } from './renderizador.js';
+import { iniciarMouse, obterOrientacao } from './mouse.js';
+import { leitorOBJ } from './leitorOBJ.js';
 import { carregarGLB } from './leitorGLB.js';
 import { criarHUD } from './hud.js';
 import { criarAnimadorGLB } from './animador.js';
 
-//carrega os modelos obj antes de iniciar a renderizacao
+// Carregamento dos modelos obj
+
 async function carregarModelos() {
     const modelos = {};
 
-    // Obtém os nomes dos modelos, sem duplicatas.
     const nomesModelos = new Set(
         obterObjetosMapa()
             .map(objeto => objeto.modelo)
             .filter(Boolean)
     );
 
-    // Modelos dos personagens
     nomesModelos.add('personagem.obj');
 
-    // Carrega os modelos em paralelo.
     await Promise.all(
         [...nomesModelos].map(async nome => {
             try {
-                modelos[nome] = await leitorOBJ.carregarArquivo(
-                    `./modelosOBJ/${nome}`
-                );
+                modelos[nome] =
+                    await leitorOBJ.carregarArquivo(
+                        `./modelosOBJ/${nome}`
+                    );
 
                 console.log(`Modelo carregado: ${nome}`);
             } catch (erro) {
-                console.error(`Erro ao carregar ${nome}:`, erro);
+                console.error(
+                    `Erro ao carregar ${nome}:`,
+                    erro
+                );
             }
         })
     );
 
     return modelos;
 }
+
+// Missões
 
 function obterNomeMissao(task) {
     const nomes = {
@@ -47,14 +65,23 @@ function obterNomeMissao(task) {
     };
 
     return nomes[task.id]
-        ?? (task.nome && task.nome !== task.id
-            ? task.nome
-            : String(task.id).replace(/^task_/, '').replaceAll('_', ' '));
+        ?? (
+            task.nome && task.nome !== task.id
+                ? task.nome
+                : String(task.id)
+                    .replace(/^task_/, '')
+                    .replaceAll('_', ' ')
+        );
 }
 
+// Animações
+
 function escolherAnimacao(teclas = {}) {
-    const frente = Number(!!teclas.w) - Number(!!teclas.s);
-    const lateral = Number(!!teclas.d) - Number(!!teclas.a);
+    const frente =
+        Number(!!teclas.w) - Number(!!teclas.s);
+
+    const lateral =
+        Number(!!teclas.d) - Number(!!teclas.a);
 
     if (frente > 0) return 'Walking';
     if (frente < 0) return 'WalkingBackwards';
@@ -65,24 +92,43 @@ function escolherAnimacao(teclas = {}) {
     return 'Idle';
 }
 
+// Inicialização
 
 async function iniciarJogo() {
     const estadoAnteriorMissoes = new Map();
-    //const hud = criarHUD();
+    let idsMissoesAnteriores = new Set();
+
+    const hud = criarHUD();
+
+    // Carrega modelos estáticos.
     const modelos = await carregarModelos();
 
+    // Carrega personagem animado.
     const personagemGLB = await carregarGLB(
         './modelosGLB/personagem.glb'
     );
 
+    console.log(
+        'Animações disponíveis:',
+        personagemGLB.animacoes.map(
+            animacao => animacao.name
+        )
+    );
+
+    // Um animador por jogador remoto.
     const animadores = new Map();
 
+    const canvas = document.getElementById('jogo');
+
     const renderizador = criarRenderizador(
-        document.getElementById('jogo'),
+        canvas,
         modelos,
         personagemGLB
     );
-    iniciarMouse(document.getElementById("jogo"));
+
+    // Inicializa os controles apenas uma vez.
+    iniciarMouse(canvas);
+
     configurarInteracao(() => {
         enviarInteracao();
     });
@@ -90,143 +136,220 @@ async function iniciarJogo() {
     const objetosInterativos = obterObjetosMapa()
         .filter(objeto => objeto.interativo);
 
-    // A cada 50 ms: envia teclas. O servidor decide para onde cada cubo vai.
+    // Envio de teclas para o servidor
+
     setInterval(() => {
         const { anguloHorizontal } = obterOrientacao();
-        enviarTeclas(lerTeclas(), anguloHorizontal);
+
+        enviarTeclas(
+            lerTeclas(),
+            anguloHorizontal
+        );
     }, 50);
 
+    // Loop de renderização
 
     let tempoAnterior = null;
-    // O navegador desenha na taxa do monitor: não é ele que calcula a física.
+
     function desenharQuadro(tempoAtual) {
-        const { meuId, estado, situacao } = obterSessao();
-        const { anguloHorizontal } = obterOrientacao();
-
-        const minhasMissoes = (estado.tasks ?? [])
-            .filter(task =>
-                String(task.jogadorId) === String(meuId)
-            )
-            .map(task => ({
-                id: task.id,
-                nome: obterNomeMissao(task),
-                concluida:
-                    task.concluida === true ||
-                    task.status === 'concluida'
-            }));
-
-        // Verifica quais missões acabaram de ser concluídas.
-        for (const missao of minhasMissoes) {
-            const anterior = estadoAnteriorMissoes.get(missao.id);
-
-            if (anterior === false && missao.concluida) {
-                //hud.mostrarConclusaoMissao(missao.nome);
-            }
-
-            estadoAnteriorMissoes.set(
-                missao.id,
-                missao.concluida
-            );
-        }
-
-        // Atualiza a lista visual.
-        //hud.atualizarMissoes(minhasMissoes);
-
-        const direcaoOlhar = {
-            x: Math.sin(anguloHorizontal),
-            z: -Math.cos(anguloHorizontal)
-        };
-
-        // Encontra o jogador local.
-        const meuJogador = (estado.jogadores ?? []).find(
-            jogador => String(jogador.id) === String(meuId)
-        );
-
-        // Verifica proximidade.
-        const objetoProximo = meuJogador
-            ? obterObjetoInterativoProximo(
-                meuJogador,
-                objetosInterativos,
-                direcaoOlhar,
-                2,
-                35
-            )
-            : null;
-
-        //hud.atualizarInteracao(objetoProximo);
-
         try {
+            const { meuId, estado } = obterSessao();
 
-            const deltaSegundos = tempoAnterior === null
-                ? 0
-                : Math.min((tempoAtual - tempoAnterior) / 1000, 0.05);
+            const jogadores = estado?.jogadores ?? [];
+
+            const { anguloHorizontal } = obterOrientacao();
+
+            const deltaSegundos =
+                tempoAnterior === null
+                    ? 0
+                    : Math.min(
+                        Math.max(
+                            (tempoAtual - tempoAnterior) / 1000,
+                            0
+                        ),
+                        0.05
+                    );
 
             tempoAnterior = tempoAtual;
 
+            // Missões do jogador
+
+            const minhasMissoes = (estado?.tasks ?? [])
+                .filter(task =>
+                    String(task.jogadorId) === String(meuId)
+                )
+                .map(task => ({
+                    id: task.id,
+                    nome: obterNomeMissao(task),
+                    concluida:
+                        task.concluida === true ||
+                        task.status === 'concluida'
+                }));
+
+            // Alerta de missões
+
+            const novasMissoes = minhasMissoes.filter(
+                missao =>
+                    !missao.concluida &&
+                    !idsMissoesAnteriores.has(
+                        String(missao.id)
+                    )
+            );
+
+            if (novasMissoes.length > 0) {
+                hud.mostrarRecebimentoMissoes(
+                    novasMissoes.length
+                );
+            }
+
+            // Guarda as missões conhecidas.
+            idsMissoesAnteriores = new Set(
+                minhasMissoes.map(
+                    missao => String(missao.id)
+                )
+            );
+
+            // Conclusão de missões
+
+            for (const missao of minhasMissoes) {
+                const id = String(missao.id);
+
+                const anterior =
+                    estadoAnteriorMissoes.get(id);
+
+                if (
+                    anterior === false &&
+                    missao.concluida
+                ) {
+                    hud.mostrarConclusaoMissao(missao.nome);
+                }
+
+                estadoAnteriorMissoes.set(
+                    id,
+                    missao.concluida
+                );
+            }
+
+            // Atualiza a lista de missões do HUD.
+            hud.atualizarMissoes(minhasMissoes);
+
+            // Interação com os objetos
+            const direcaoOlhar = {
+                x: Math.sin(anguloHorizontal),
+                z: -Math.cos(anguloHorizontal)
+            };
+
+            const meuJogador = jogadores.find(
+                jogador =>
+                    String(jogador.id) === String(meuId)
+            );
+
+            const objetoProximo = meuJogador
+                ? obterObjetoInterativoProximo(
+                    meuJogador,
+                    objetosInterativos,
+                    direcaoOlhar,
+                    2,
+                    35
+                )
+                : null;
+
+            hud.atualizarInteracao(objetoProximo);
+
+            // Animações do jogador
+
             const idsAtivos = new Set();
 
-            for (const jogador of estado.jogadores ?? []) {
-                // Nossa câmera é FPS: só desenhamos os outros jogadores.
-                if (String(jogador.id) === String(meuId)) {
+            for (const jogador of jogadores) {
+                // Não desenha o jogador local.
+                if (
+                    String(jogador.id) === String(meuId)
+                ) {
                     continue;
                 }
 
                 const id = String(jogador.id);
+
                 idsAtivos.add(id);
 
                 let animador = animadores.get(id);
 
+                // Cria o animador uma única vez.
                 if (!animador) {
-                    animador = criarAnimadorGLB(personagemGLB);
+                    animador = criarAnimadorGLB(
+                        personagemGLB
+                    );
+
                     animador.tocar('Idle');
+
                     animadores.set(id, animador);
                 }
 
-                const proximaAnimacao = escolherAnimacao(
-                    jogador.teclas
-                );
+                // Seleciona a animação.
+                const proximaAnimacao =
+                    escolherAnimacao(jogador.teclas);
 
-                // Evita reiniciar a animação a cada quadro.
-                if (animador.obterAnimacaoAtual() !== proximaAnimacao) {
+                // Troca somente quando necessário.
+                if (
+                    animador.obterAnimacaoAtual() !==
+                    proximaAnimacao
+                ) {
                     console.log(
                         `[ANIMAÇÃO] Jogador ${id}:`,
                         animador.obterAnimacaoAtual(),
                         '→',
-                        proximaAnimacao,
-                        jogador.teclas
+                        proximaAnimacao
                     );
 
                     animador.tocar(proximaAnimacao);
                 }
 
+                // Avança os keyframes.
                 animador.atualizar(deltaSegundos);
 
+                // Envia as matrizes exclusivas do jogador.
                 renderizador.definirMatrizesOssos(
                     id,
                     animador.obterMatrizesOssos()
                 );
             }
 
-            // Limpa animadores de jogadores que saíram.
+            // Limpeza de animadores
+
             for (const id of animadores.keys()) {
                 if (!idsAtivos.has(id)) {
                     animadores.delete(id);
-                    renderizador.removerMatrizesOssos(id);
+
+                    renderizador.removerMatrizesOssos(
+                        id
+                    );
                 }
             }
 
+            // Renderização
+
             renderizador.desenhar(
-                estado.jogadores,
+                jogadores,
                 meuId,
                 obterOrientacao()
             );
+
         } catch (erro) {
-            console.error('Erro ao renderizar personagem:', erro);
+            console.error(
+                'Erro no loop do jogo:',
+                erro
+            );
+
         } finally {
+            // Sempre agenda o próximo quadro.
             requestAnimationFrame(desenharQuadro);
         }
     }
+
+    // Inicia o loop uma única vez.
     requestAnimationFrame(desenharQuadro);
 }
 
-iniciarJogo();
+iniciarJogo().catch(erro => {
+    console.error('Erro ao iniciar o jogo:', erro);
+});

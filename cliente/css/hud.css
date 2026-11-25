@@ -1,631 +1,528 @@
-/* ============================================================
-   HUD NC2A — CSS consolidado
-   Mantém: bordas, relevo, proporções e centralização do painel.
-   Sem regras duplicadas da versão antiga.
-   ============================================================ */
+/* cliente/styles/hud.css | NC2A Simulator — HUD de escritório */
 
-:root {
-    --hud-ink: #40536b;
-}
-
-/* Camada sobre o canvas. O mouse continua controlando a câmera. */
-#hud-cozy {
+.nc2a-hud {
+    --nc2a-azul: #344c6b;
+    --nc2a-contorno: #45556a;
+    --nc2a-papel: rgba(240, 237, 228, .97);
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 3000;
     pointer-events: none;
-    color: var(--hud-ink);
-    font-family: 'Trebuchet MS', system-ui, sans-serif;
+    color: #1e2530;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
+    line-height: 1.2;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
 }
 
-#hud-cozy *,
-#hud-cozy *::before,
-#hud-cozy *::after {
+.nc2a-hud *, .nc2a-hud *::before, .nc2a-hud *::after {
     box-sizing: border-box;
 }
 
-#hud-cozy button {
-    font: inherit;
+.nc2a-hud [hidden] {
+    display: none !important;
+}
+
+/* Marca e relógio, canto superior esquerdo */
+.nc2a-canto-esquerdo {
+    position: absolute;
+    top: 30px;
+    left: 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 13px;
+}
+
+.nc2a-identidade, .nc2a-relogio {
+    background: var(--nc2a-papel);
+    border: 2px solid var(--nc2a-contorno);
+    box-shadow: inset 1px 1px rgba(255, 255, 255, .85),
+                inset -2px -2px rgba(75, 79, 83, .17),
+                1px 2px 0 rgba(21, 31, 42, .7),
+                2px 5px 8px rgba(13, 19, 27, .18);
+}
+
+.nc2a-identidade {
+    width: 340px;
+    min-height: 81px;
+    display: flex;
+    align-items: center;
+    padding: 11px 13px;
+    gap: 13px;
+}
+
+.nc2a-logo {
+    width: 48px;
+    height: 52px;
+    flex: 0 0 48px;
+    display: grid;
+    place-items: center;
+    color: #f8f5ed;
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -.04em;
+    background: #67809d;
+    border: 2px solid #364d69;
+    box-shadow: inset 2px 2px rgba(255,255,255,.19),
+                inset -2px -2px rgba(15,35,55,.23),
+                1px 2px 0 rgba(20,32,47,.38);
+}
+
+.nc2a-identidade-textos {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+}
+
+.nc2a-subtitulo {
+    font-size: 14px;
+    color: #5b6d82;
+    font-weight: 600;
+}
+
+.nc2a-nome {
+    font-size: 24px;
+    line-height: 1.05;
+    letter-spacing: -.5px;
+    white-space: nowrap;
+    color: #304965;
+    font-weight: 800;
+}
+
+.nc2a-relogio {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-height: 51px;
+    padding: 8px 14px;
+}
+
+.nc2a-calendario {
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    fill: none;
+    stroke: #2d4868;
+    stroke-width: 2;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+}
+
+.nc2a-hora {
+    min-width: 71px;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    font-variant-numeric: tabular-nums;
+    color: #344e6e;
+}
+
+.nc2a-hora-divisor {
+    height: 26px;
+    width: 1px;
+    background: #667384;
+}
+
+.nc2a-periodo {
+    font-size: 16px;
+    font-style: italic;
+    color: #24272d;
+    padding-right: 2px;
+}
+
+/* Lista de missões: linhas finas e checkbox de papel */
+.nc2a-missoes {
+    position: absolute;
+    top: 36px;
+    right: 26px;
+    width: 328px;
+    border: 2px solid #48586b;
+    background: #e9e6dc;
+    box-shadow: inset 1px 1px rgba(255,255,255,.65),
+                1px 3px 0 rgba(20,28,37,.55),
+                2px 6px 9px rgba(15,22,29,.16);
+}
+
+.nc2a-missoes-titulo {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 41px;
+    padding: 0 13px;
+    background: #344d70;
+    color: #f4f1e8;
+    border: 0;
+    border-bottom: 2px solid #6b8198;
+    border-radius: 0;
+    box-shadow: inset 0 1px rgba(255,255,255,.18);
+    font: 700 22px/1 Arial, Helvetica, sans-serif;
+    text-align: left;
     cursor: pointer;
     pointer-events: auto;
 }
 
-#hud-cozy [hidden] {
-    display: none !important;
-}
+.nc2a-missoes-titulo:hover { background: #3b5577; }
+.nc2a-missoes-titulo:focus-visible { outline: 2px solid white; outline-offset: -4px; }
+.nc2a-missoes-seta { font-size: 16px; font-weight: 400; opacity: .85; }
+.nc2a-missoes-lista { max-height: min(46vh, 365px); overflow-y: auto; }
+.nc2a-recolhido .nc2a-missoes-lista { display: none; }
 
-/* ================= IDENTIDADE ================= */
-.hud-identidade {
-    position: absolute;
-    top: 22px;
-    left: 24px;
+.nc2a-missao {
+    min-height: 40px;
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 10px 15px 10px 10px;
-    background: rgba(255, 248, 237, .97);
-    border: 3px solid #7195c0;
-    border-radius: 19px;
-    box-shadow: 0 4px 0 #4e7097, 0 10px 20px rgba(20, 40, 65, .20);
+    justify-content: space-between;
+    gap: 13px;
+    padding: 6px 13px 6px 16px;
+    border-bottom: 1px solid #6b7074;
+    background: rgba(242, 239, 229, .96);
 }
 
-.hud-logo {
-    display: grid;
-    place-items: center;
-    flex: 0 0 48px;
-    width: 48px;
-    height: 48px;
-    border: 2px solid #4e7097;
-    border-radius: 12px;
-    background: #7e9cc9;
-    color: #fff;
-    font-size: 22px;
-    font-weight: 800;
-    box-shadow: 0 3px 0 #375d89;
-}
+.nc2a-missao:nth-child(even) { background: rgba(232, 229, 220, .96); }
+.nc2a-missao:last-child { border-bottom: 0; }
+.nc2a-missao-concluida { background: #dbe3d5 !important; }
 
-.hud-identidade>div:last-child {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.hud-identidade small {
-    color: #8191a7;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: .06em;
-}
-
-.hud-identidade strong {
-    color: #40536b;
-    font-size: 16px;
-    line-height: 1.2;
-    font-weight: 800;
+.nc2a-missao-nome {
+    flex: 1;
+    min-width: 0;
+    color: #20252b;
+    font: italic 16px/1.25 Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* ================= HORÁRIO ================= */
-.hud-horario {
+.nc2a-missao-check {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border: 2px solid #606b77;
+    background: #eeeae1;
+    box-shadow: inset 1px 1px rgba(255,255,255,.9);
+}
+
+.nc2a-missao-concluida .nc2a-missao-check::after {
+    content: '';
     position: absolute;
-    top: 132px;
-    left: 24px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 11px 16px;
-    font-size: 18px;
-    line-height: 1.2;
-    color: #7a603f;
-    background: rgba(255, 241, 217, .97);
-    border: 3px solid #e4aa5b;
-    border-radius: 14px;
-    box-shadow: 0 4px 0 #c88b44, 0 9px 16px rgba(80, 55, 20, .16);
-    font-weight: 800;
+    width: 12px;
+    height: 20px;
+    left: 6px;
+    top: -5px;
+    transform: rotate(43deg);
+    border-right: 4px solid #327a4e;
+    border-bottom: 4px solid #327a4e;
 }
 
-/* ================= MISSÕES ================= */
-#hud-cozy .hud-missoes {
+.nc2a-missao-vazia {
+    padding: 16px 18px;
+    text-align: center;
+    font-style: italic;
+    color: #69707a;
+}
+
+/* Prompt flutuante acima da hotbar */
+.nc2a-interacao {
     position: absolute;
-    top: 24px;
-    right: 24px;
-    width: min(328px, calc(100vw - 32px));
-    padding: 11px;
-    display: flex;
-    flex-direction: column;
-    gap: 11px;
-    color: #395f4b;
-    background: #e3efdc;
-    border: 3px solid #7fb78c;
-    border-radius: 21px;
-    box-shadow:
-        inset 0 0 0 2px #fffef5,
-        0 5px 0 #55996d,
-        0 12px 24px rgba(31, 68, 42, .22);
-    pointer-events: none;
-}
-
-/* Cabeçalho: ocupa a mesma largura útil dos cartões; texto centralizado. */
-#hud-cozy #botao-missoes {
-    width: 100%;
-    min-height: 51px;
-    margin: 0;
-    padding: 10px 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    border: 2px solid #bdd5b9;
-    border-radius: 13px;
-    background: linear-gradient(180deg, #fffdf4 0%, #f5f9ee 100%);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), 0 3px 0 #b4cfac;
-    color: #365e48;
-    font-family: inherit;
-    font-size: 17px;
-    font-weight: 900;
-    line-height: 1.25;
-    letter-spacing: -.12px;
-    text-align: center;
-    white-space: normal;
-    pointer-events: auto;
-    cursor: pointer;
-}
-
-#hud-cozy #botao-missoes:focus-visible {
-    outline: 3px solid #eab56b;
-    outline-offset: 3px;
-}
-
-/* Div central, com largura, espaçamento e cantos proporcionais. */
-#hud-cozy #painel-missoes {
-    margin: 0;
-    padding: 10px;
-    background: #f0f7e9;
-    border: 2px solid #b7d4b6;
-    border-radius: 15px;
-    box-shadow: inset 0 2px 3px rgba(54, 99, 60, .045);
-    pointer-events: none;
-}
-
-#hud-cozy #painel-missoes[hidden] {
-    display: none !important;
-}
-
-#hud-cozy #lista-missoes,
-#hud-cozy .hud-missoes-ul {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 9px;
-    margin: 0;
-    padding: 0;
-}
-
-/* Três colunas simétricas: 30px | texto | 30px.
-   O texto fica rigorosamente centralizado no card. */
-#hud-cozy .hud-missao-item {
-    display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) 30px;
-    align-items: center;
-    column-gap: 7px;
-    width: 100%;
-    min-width: 0;
-    min-height: 55px;
-    margin: 0;
-    padding: 9px 10px;
-    border: 2px solid #c9dcc5;
-    border-radius: 12px;
-    background: #fffdf5;
-    box-shadow: inset 0 1px 0 #fff, 0 3px 0 #d3e4cd;
-}
-
-#hud-cozy .hud-missao-item::after {
-    content: "";
-    display: block;
-    grid-column: 3;
-    width: 30px;
-}
-
-#hud-cozy .hud-missao-bolinha {
-    grid-column: 1;
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    min-width: 0;
-    margin: 0;
-    border: 2px solid #b3d3b4;
-    border-radius: 9px;
-    background: #e7f3e2;
-    color: #5b966a;
-    box-shadow: 0 2px 0 #cee3c9;
-    font-size: 17px;
-    font-weight: 900;
-    line-height: 1;
-}
-
-#hud-cozy .hud-missao-nome {
-    grid-column: 2;
-    min-width: 0;
-    margin: 0;
-    color: #395f49;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: -.05px;
-    line-height: 1.36;
-    text-align: center;
-    text-wrap: pretty;
-    overflow-wrap: break-word;
-}
-
-#hud-cozy .hud-missao-item.concluida {
-    background: #e6f2e2;
-    border-color: #a5cba7;
-    box-shadow: inset 0 1px 0 #f8fff5, 0 3px 0 #b7d6b5;
-}
-
-#hud-cozy .hud-missao-item.concluida .hud-missao-bolinha {
-    background: #77af86;
-    border-color: #57996b;
-    color: #fff;
-    box-shadow: 0 2px 0 #5e9870;
-}
-
-#hud-cozy .hud-missao-item.concluida .hud-missao-nome {
-    color: #53795e;
-    text-decoration: none;
-    opacity: 1;
-}
-
-#hud-cozy .hud-missao-vazia {
-    list-style: none;
-    padding: 12px;
-    text-align: center;
-    color: #6a8c70;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-/* ================= INVENTÁRIO ================= */
-.hud-inventario {
-    position: absolute;
-    bottom: 25px;
     left: 50%;
+    bottom: 116px;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 10px;
-    border: 3px solid #8fa9cf;
-    border-radius: 21px;
-    background: rgba(255, 248, 237, .97);
-    box-shadow: 0 5px 0 #6687b4, 0 10px 25px rgba(30, 50, 85, .22);
+    gap: 11px;
+    padding: 6px 14px 6px 6px;
+    min-width: 177px;
+    background: rgba(240,237,229,.97);
+    border: 2px solid #526176;
+    box-shadow: 1px 3px 0 rgba(20,30,41,.48),
+                2px 5px 10px rgba(5,12,24,.2);
 }
 
-.hud-slot {
+.nc2a-interacao-tecla {
     display: grid;
     place-items: center;
-    width: 64px;
-    height: 64px;
-    border: 2px solid #9bb5da;
-    border-radius: 14px;
-    background: #e3eefb;
-    color: #5c7ba7;
-    font-size: 14px;
-    font-weight: 800;
-    box-shadow: inset 0 2px 4px rgba(255, 255, 255, .7), 0 3px 0 rgba(75, 105, 145, .3);
+    width: 45px;
+    height: 41px;
+    flex: 0 0 45px;
+    border: 2px solid #425873;
+    background: #617b99;
+    color: #fff;
+    font: 700 20px/1 Arial, Helvetica, sans-serif;
+    box-shadow: inset 1px 1px rgba(255,255,255,.25);
 }
 
-.hud-slot:nth-child(2) {
-    background: #ffe7d4;
-    color: #b77950;
+.nc2a-interacao-conteudo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nc2a-interacao-conteudo strong { font-size: 15px; line-height: 1; }
+.nc2a-interacao-conteudo span {
+    max-width: 210px;
+    color: #34373c;
+    font-size: 13px;
+    font-style: italic;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
-.hud-slot:nth-child(3) {
-    background: #eee2fc;
-    color: #9076b3;
-}
-
-.hud-slot:nth-child(4) {
-    background: #e6f2d8;
-    color: #72926b;
-}
-
-.hud-slot.ativo {
-    border-color: #3e78c1;
-    outline: 2px solid #fff;
-    box-shadow: 0 4px 0 #3e78c1, 0 6px 14px rgba(62, 120, 193, .25);
-}
-
-/* ================= MOVIMENTAÇÃO WASD ================= */
-.hud-movimento {
+/* Inventário: quatro slots retos, translúcidos, sem base colorida. */
+.nc2a-hotbar {
     position: absolute;
-    left: 24px;
-    bottom: 26px;
-    width: max-content;
-    padding: 12px 14px;
-    border: 3px solid #8fa9cf;
-    border-radius: 18px;
-    background: rgba(255, 248, 237, .96);
-    color: #4c6079;
-    box-shadow: 0 5px 0 #6687b4, 0 10px 20px rgba(25, 40, 70, .2);
+    left: 50%;
+    bottom: 34px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 13px;
 }
 
-.hud-movimento-titulo {
-    display: block;
-    margin-bottom: 8px;
-    color: #7d8ea6;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .07em;
-    text-transform: uppercase;
+.nc2a-slot {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border: 2px solid rgba(221,235,246,.7);
+    background: rgba(91,113,140,.23);
+    box-shadow: inset 1px 1px rgba(255,255,255,.09), 0 2px 5px rgba(0,0,0,.08);
+    color: #f4f5f6;
+    text-shadow: 0 1px 2px rgba(0,0,0,.45);
 }
 
-.hud-wasd {
-    display: grid;
-    grid-template-columns: repeat(3, 34px);
-    grid-template-rows: repeat(2, 34px);
-    justify-content: center;
-    gap: 6px;
-    margin-bottom: 8px;
+.nc2a-slot-selecionado {
+    border-color: rgba(255,255,255,.94);
+    background: rgba(105,126,150,.3);
 }
 
-.hud-tecla {
+.nc2a-slot-numero {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.nc2a-slot-item {
+    position: absolute;
+    inset: 18px 5px 4px;
     display: grid;
     place-items: center;
-    background: #e4eefb;
-    border: 2px solid #89a7d2;
-    border-radius: 9px;
-    color: #4e6e99;
-    font-size: 14px;
-    font-weight: 900;
-    box-shadow: 0 2px 0 rgba(102, 135, 180, .5);
+    text-align: center;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.15;
+    text-shadow: 0 1px 2px #000;
 }
 
-.hud-movimento-legenda {
-    display: block;
-    color: #6f7f95;
+.nc2a-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 217px;
+    transform: translateX(-50%);
+    border: 2px solid #486554;
+    background: rgba(225,239,222,.96);
+    color: #2f5b3d;
+    padding: 9px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 1px 3px 0 rgba(25,46,33,.42);
+    white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+    .nc2a-canto-esquerdo { top: 16px; left: 14px; gap: 9px; }
+    .nc2a-identidade { width: 250px; min-height: 63px; padding: 8px; gap: 9px; }
+    .nc2a-logo { width: 38px; height: 43px; flex-basis: 38px; font-size: 22px; }
+    .nc2a-subtitulo { font-size: 11px; }
+    .nc2a-nome { font-size: 18px; }
+    .nc2a-relogio { padding: 6px 10px; gap: 9px; min-height: 42px; }
+    .nc2a-calendario { width: 22px; height: 22px; flex-basis: 22px; }
+    .nc2a-hora { font-size: 20px; min-width: 59px; }
+    .nc2a-periodo { font-size: 13px; }
+    .nc2a-missoes { top: 16px; right: 14px; width: 236px; }
+    .nc2a-missoes-titulo { height: 34px; font-size: 17px; }
+    .nc2a-missao { padding: 5px 8px; min-height: 34px; }
+    .nc2a-missao-nome { font-size: 13px; }
+    .nc2a-missao-check { width: 19px; height: 19px; flex-basis: 19px; }
+    .nc2a-missao-concluida .nc2a-missao-check::after { left: 4px; top: -5px; width: 11px; height: 16px; }
+    .nc2a-slot { width: 54px; height: 54px; }
+    .nc2a-hotbar { bottom: 22px; gap: 8px; }
+    .nc2a-interacao { bottom: 88px; }
+    .nc2a-toast { bottom: 170px; }
+}
+
+
+/* =========================================
+   CONTROLES — CANTO INFERIOR ESQUERDO
+   ========================================= */
+
+.nc2a-controles {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 20;
+
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+
+    padding: 12px 15px;
+
+    background: rgba(226, 224, 215, 0.85);
+    border: 1px solid #53616d;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.6),
+        2px 3px 0 rgba(20, 32, 46, 0.45);
+
+    color: #243950;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Linha das teclas WASD */
+
+.nc2a-controles-movimento {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.nc2a-teclas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.nc2a-teclas-cima,
+.nc2a-teclas-baixo {
+    display: flex;
+    gap: 3px;
+}
+
+/* Controles — canto inferior esquerdo */
+
+.nc2a-controles {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    z-index: 20;
+
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 42px;
+
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+
+    color: white;
+    font-family: Arial, sans-serif;
+    pointer-events: none;
+    user-select: none;
+}
+
+.nc2a-controles-movimento {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.nc2a-teclas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.nc2a-teclas-cima,
+.nc2a-teclas-baixo {
+    display: flex;
+    gap: 3px;
+}
+
+.nc2a-controles kbd {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 25px;
+    height: 25px;
+    box-sizing: border-box;
+
+    background: rgba(20, 28, 40, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 0;
+    box-shadow: none;
+
+    color: white;
     font-size: 12px;
     font-weight: 600;
 }
 
-/* ================= AVISO E — INTERAGIR ================= */
-#hud-interacao {
-    position: absolute;
-    left: 50%;
-    bottom: 145px;
-    transform: translateX(-50%);
+.nc2a-controles-descricao {
+    margin-bottom: 5px;
+}
+
+.nc2a-controles-acao {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 15px;
-    border: 3px solid #d7a76e;
-    border-radius: 16px;
-    background: rgba(255, 247, 231, .97);
-    box-shadow: 0 4px 0 #ac8050, 0 8px 20px rgba(0, 0, 0, .20);
-    color: #65492f;
-    pointer-events: none;
-    user-select: none;
-    white-space: nowrap;
+    gap: 10px;
+    margin-bottom: 0;
 }
 
-.hud-interacao-tecla {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border: 2px solid #ac8050;
-    border-radius: 10px;
-    background: #e2af75;
-    color: #583e28;
-    font-size: 20px;
-    font-weight: 900;
-    box-shadow: 0 3px 0 #ac8050;
-}
-
-.hud-interacao-texto {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.hud-interacao-texto strong {
-    font-size: 15px;
-}
-
-.hud-interacao-texto small {
-    color: #866c53;
+.nc2a-controles-descricao,
+.nc2a-controles-acao span {
+    color: white;
     font-size: 12px;
+    font-weight: 500;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.85);
 }
 
-/* ================= MISSÃO CONCLUÍDA ================= */
-.hud-toast-missao {
-    position: absolute;
-    top: 25px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 260px;
-    max-width: min(360px, calc(100vw - 30px));
-    padding: 14px 16px;
-    border: 3px solid #7db486;
-    border-radius: 18px;
-    background: rgba(234, 248, 228, .98);
-    box-shadow: 0 5px 0 #5f9669, 0 10px 24px rgba(20, 60, 28, .22);
-    color: #3f6349;
-    pointer-events: none;
-    z-index: 2;
+.nc2a-controles-divisor {
+    display: none;
 }
 
-.hud-toast-icone {
-    flex: 0 0 40px;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border: 2px solid #7db486;
-    border-radius: 12px;
-    background: #d7efcf;
-    color: #4f8b59;
-    font-size: 22px;
-    font-weight: 900;
+/* Toast de novas missões */
+
+.nc2a-toast.nc2a-toast-recebimento {
+    background: rgba(35, 54, 72, 0.94);
+    color: #f1eee5;
+
+    border: 1px solid rgba(210, 218, 224, 0.55);
+    border-left: 3px solid #d2bb85;
+
+    border-radius: 0;
+
+    box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.25);
+
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
 }
 
-.hud-toast-texto {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+.nc2a-toast[hidden] {
+    display: none;
 }
 
-.hud-toast-texto strong {
-    color: #42624c;
-    font-size: 16px;
-}
+/* Telas menores */
 
-.hud-toast-texto span {
-    color: #5d7b66;
-    font-size: 14px;
-    font-weight: 700;
-    overflow-wrap: anywhere;
-}
-
-.hud-toast-missao.aparecendo {
-    animation: hudToastAparecer 2.6s ease both;
-}
-
-@keyframes hudToastAparecer {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -15px) scale(.96);
-    }
-
-    12% {
-        opacity: 1;
-        transform: translate(-50%, 0) scale(1);
-    }
-
-    85% {
-        opacity: 1;
-        transform: translate(-50%, 0) scale(1);
-    }
-
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -8px) scale(.98);
-    }
-}
-
-/* ================= RESPONSIVIDADE ================= */
-@media (max-width: 720px) {
-    .hud-identidade {
-        top: 12px;
+@media (max-width: 700px) {
+    .nc2a-controles {
+        bottom: 12px;
         left: 12px;
-        padding: 8px;
-    }
-
-    .hud-logo {
-        width: 40px;
-        height: 40px;
-        flex-basis: 40px;
-    }
-
-    .hud-identidade small {
-        font-size: 8px;
-    }
-
-    .hud-identidade strong {
-        font-size: 13px;
-    }
-
-    .hud-horario {
-        top: 91px;
-        left: 12px;
-        font-size: 16px;
-        padding: 9px 12px;
-    }
-
-    #hud-cozy .hud-missoes {
-        top: 24px;
-        right: 12px;
-        width: min(286px, calc(100vw - 24px));
-        padding: 9px;
-        gap: 9px;
-    }
-
-    #hud-cozy #botao-missoes {
-        min-height: 45px;
-        padding: 9px 10px;
-        font-size: 15px;
-    }
-
-    #hud-cozy #painel-missoes {
-        padding: 8px;
-    }
-
-    #hud-cozy .hud-missao-item {
-        min-height: 49px;
-        padding: 8px;
-        grid-template-columns: 26px minmax(0, 1fr) 26px;
-        column-gap: 5px;
-    }
-
-    #hud-cozy .hud-missao-item::after {
-        width: 26px;
-    }
-
-    #hud-cozy .hud-missao-bolinha {
-        width: 26px;
-        height: 26px;
-        font-size: 16px;
-    }
-
-    #hud-cozy .hud-missao-nome {
-        font-size: 13px;
-    }
-
-    .hud-inventario {
-        bottom: 14px;
-        gap: 5px;
-        padding: 7px;
-    }
-
-    .hud-slot {
-        width: 48px;
-        height: 48px;
-    }
-
-    #hud-interacao {
-        bottom: 104px;
-    }
-
-    .hud-movimento {
-        left: 12px;
-        bottom: 14px;
-        padding: 8px;
-    }
-
-    .hud-movimento-legenda,
-    .hud-movimento-titulo {
-        display: none;
-    }
-
-    .hud-wasd {
-        grid-template-columns: repeat(3, 26px);
-        grid-template-rows: repeat(2, 26px);
-        gap: 3px;
-        margin-bottom: 0;
-    }
-
-    .hud-tecla {
-        font-size: 11px;
+        padding: 8px 10px;
+        transform: scale(0.85);
+        transform-origin: bottom left;
     }
 }
 
-@media (max-width: 480px) {
-    .hud-movimento {
-        display: none;
-    }
-
-    .hud-identidade {
-        max-width: calc(100vw - 24px);
-    }
-
-    #hud-cozy .hud-missoes {
-        top: 154px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-    #hud-cozy *,
-    #hud-cozy *::before,
-    #hud-cozy *::after {
-        animation: none !important;
-        transition: none !important;
-    }
+@media (max-width: 550px) {
+    .nc2a-missoes { top: 143px; }
+    .nc2a-missoes-lista { max-height: 27vh; }
 }
