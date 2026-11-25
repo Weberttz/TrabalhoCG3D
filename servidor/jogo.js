@@ -609,7 +609,13 @@ export class Jogo {
                 cubo: jogador.cubo,
 
                 x: Number(jogador.x.toFixed(4)),
-                z: Number(jogador.z.toFixed(4))
+                z: Number(jogador.z.toFixed(4)),
+                teclas: Date.now() - jogador.instanteUltimaEntrada
+                    <= CONFIGURACAO.tempoLimiteEntradaMs
+                        ? { ...jogador.teclas }
+                        : { w: false, a: false, s: false, d: false },
+
+                anguloHorizontal: jogador.anguloHorizontal,
             })),
 
             tasks: [
