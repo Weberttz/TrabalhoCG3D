@@ -1,4 +1,5 @@
 import { obterObjetosMapa } from './mapa.js';
+import { criarDesenhadorGLB } from './renderizadorGLB.js';
 const SHADER_VERTICE = `#version 300 es
 in vec3 aPosicao;
 uniform mat4 uMatrizMVP;
@@ -10,6 +11,7 @@ uniform vec3 uCor;
 out vec4 corFinal;
 void main() { corFinal = vec4(uCor, 1.0); }
 `;
+const ALTURA_CAMERA = 1.55;
 
 function compilarShader(gl, tipo, codigoFonte) {
   const shader = gl.createShader(tipo);
@@ -134,7 +136,7 @@ function escalaUniforme(s) {
     ]);
 }
 
-export function criarRenderizador(canvas, modelos = {}) {
+export function criarRenderizador(canvas, modelos = {},  personagemGLB = null) {
   const gl = canvas.getContext('webgl2', { antialias: true });
   if (!gl) throw new Error('WebGL2 não disponível neste navegador');
 
@@ -176,7 +178,24 @@ export function criarRenderizador(canvas, modelos = {}) {
     gl.drawArrays(modo, 0, malha.quantidade);
   }
 
+  const desenhadorPersonagem = personagemGLB
+    ? criarDesenhadorGLB(gl, personagemGLB)
+    : null;
+
+  const matrizesOssosPorJogador = new Map();
+
   return {
+    definirMatrizesOssos(id, matrizes) {
+        matrizesOssosPorJogador.set(
+            String(id),
+            matrizes
+        );
+    },
+
+    removerMatrizesOssos(id) {
+        matrizesOssosPorJogador.delete(String(id));
+    },
+
     desenhar(jogadores, meuId, orientacao) {
       const escalaTela = Math.min(window.devicePixelRatio || 1, 2);
       const largura = Math.floor(canvas.clientWidth * escalaTela);
@@ -192,8 +211,10 @@ export function criarRenderizador(canvas, modelos = {}) {
 
       const projecao = perspectiva(Math.PI / 4,
         canvas.width / canvas.height, 0.1, 100);
-      const meuJogador = jogadores.find(jogador => jogador.id === meuId);
-      const olho = meuJogador ? [meuJogador.x, 0.65, meuJogador.z] : [0, 2, 3];
+      const meuJogador = jogadores.find(
+        jogador => String(jogador.id) === String(meuId)
+      );  
+      const olho = meuJogador ? [meuJogador.x, ALTURA_CAMERA, meuJogador.z] : [0, 2, 3];
       const { anguloHorizontal, anguloVertical } = orientacao;
       // limitar o yaw e o pitch
       const cosVertical = Math.cos(anguloVertical);
@@ -247,61 +268,68 @@ export function criarRenderizador(canvas, modelos = {}) {
           );  
       }
 
-      
       for (const jogador of jogadores) {
-          // Não desenha nosso personagem em primeira pessoa.
+          // Não desenha nosso próprio corpo na câmera FPS.
           if (jogador.id === meuId) continue;
 
-          // Seleciona um modelo para cada jogador.
-          const nomeModelo = jogador.cubo === 0
-              ? 'personagem.obj'
-              : 'personagem_sueter.obj';
+          const matrizesJogador = matrizesOssosPorJogador.get(
+              String(jogador.id)
+          );
 
-          const malha = buffersOBJ[nomeModelo];
+          if (desenhadorPersonagem && matrizesJogador) {
+              const escala = 0.85;
 
-          if (malha) {
-              // Posição do jogador no mapa.
+              // Usa a direção informada pelo servidor, se existir.
+              let angulo = jogador.anguloHorizontal ?? 0;
+
               const posicao = translacao(
                   jogador.x,
-                  0,
+                  desenhadorPersonagem.deslocamentoSolo * escala,
                   jogador.z
               );
 
-              // Ajuste inicial do tamanho do personagem.
-              const escala = escalaUniforme(0.75);
+              // subtrai de 180º o angulo e ajusta renderização frontal do personagem
+              const rotacao = rotacaoY(
+                Math.PI - angulo
+              );
 
               const matrizModelo = multiplicar(
                   posicao,
-                  escala
+                  multiplicar(
+                      rotacao,
+                      escalaUniforme(escala)
+                  )
               );
+
+              const matrizMVP = multiplicar(
+                  camera,
+                  matrizModelo
+              );
+
+              desenhadorPersonagem.desenhar(
+                  matrizMVP,
+                  matrizModelo,
+                  matrizesJogador
+              );
+
+          } else {
+              // Cubo original enquanto o GLB não estiver disponível.
+              const matrizModelo = translacao(
+                  jogador.x, 0.4, jogador.z
+              );
+
+              const cor = jogador.cubo === 0
+                  ? [0.16, 0.76, 0.94]
+                  : [1.0, 0.57, 0.22];
 
               desenharMalha(
-                  malha,
+                  cubo,
                   gl.TRIANGLES,
                   multiplicar(camera, matrizModelo),
-                  [1, 1, 1]
+                  cor
               );
-
-            } else {
-                // Mantém o cubo como fallback.
-                const matrizModelo = translacao(
-                    jogador.x,
-                    0.4,
-                    jogador.z
-                );
-
-                const cor = jogador.cubo === 0
-                    ? [0.16, 0.76, 0.94]
-                    : [1.0, 0.57, 0.22];
-
-                desenharMalha(
-                    cubo,
-                    gl.TRIANGLES,
-                    multiplicar(camera, matrizModelo),
-                    cor
-                );
-            }
-        }
+          }
+      }
     },
   };
 }
