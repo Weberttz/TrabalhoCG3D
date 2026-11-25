@@ -1,223 +1,299 @@
-// HUD NCCA — camada HTML/CSS independente do WebGL2.
-// O cliente desenha a interface; o servidor continua sendo a fonte do estado do jogo.
-
-const icones = {
-  circuito: `<svg viewBox="0 0 52 52" aria-hidden="true"><path d="M10 12h14l7 7h11M10 26h21l7-7h4M10 40h14l7-7h11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="43" cy="19" r="4" fill="currentColor"/><circle cx="43" cy="33" r="4" fill="currentColor"/><circle cx="10" cy="12" r="3" fill="currentColor"/></svg>`,
-  sol: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.6 1.6m11.6 11.6 1.6 1.6M19.4 4.6l-1.6 1.6M6.2 17.8l-1.6 1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-  lista: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h11M8 12h11M8 17h11M3.8 7l.6.6L6 6M3.8 12l.6.6L6 11M3.8 17l.6.6L6 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  mochila: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="7" width="13" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 7V5a3 3 0 0 1 6 0v2M8.5 15h7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
-  livro: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5h7a3 3 0 0 1 3 3v12H7a3 3 0 0 0-3 1zm10 3a3 3 0 0 1 3-3h3v16h-3a3 3 0 0 0-3-1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
-  chave: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m11 11 9 9m-4-4-2 2m5 1-2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-  cafe: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v6a6.5 6.5 0 0 1-13 0V8zm13 1h2a3 3 0 0 1 0 6h-2M3 21h16M8 3v2M12 2v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  bloco: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 4V2m6 2V2M9 10h6M9 14h6M9 18h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`
-};
-
-const MISSOES_EXEMPLO = [
-  { id: 'rede', nome: 'Verificar os computadores', concluida: true },
-  { id: 'livros', nome: 'Organizar a sala de estudos', concluida: false },
-  { id: 'energia', nome: 'Restaurar a energia', concluida: false }
-];
-const ITENS_EXEMPLO = [
-  { id: 'caderno', nome: 'Caderno', icone: 'livro' },
-  { id: 'chave', nome: 'Chave', icone: 'chave' },
-  { id: 'cafe', nome: 'Café', icone: 'cafe' },
-  { id: 'bloco', nome: 'Anotações', icone: 'bloco' }
-];
-
-export function recolherSubString(string){
-    // indice da primeira letra maiúscula da palavra, ou do primeiro numeral
-    const indice = string.search(/[\p{Lu}\p{N}]/u);
-    const resultado = indice === -1
-        ? string
-        : string.slice(0, indice);
-
-    return resultado
+export function recolherSubString(valor) {
+    const letras = Array.from(String(valor ?? ''));
+    const indice = letras.findIndex((letra, posicao) =>
+        posicao > 0 &&
+        /[\p{Lu}\p{N}]/u.test(letra) &&
+        /[\p{Ll}]/u.test(letras[posicao - 1])
+    );
+    return indice === -1 ? letras.join('') : letras.slice(0, indice).join('');
 }
 
 export function criarHUD() {
-    const hud = document.createElement('div');
+    // Evita painéis duplicados em caso de reinicialização do jogo.
+    document.getElementById('hud-cozy')?.remove();
 
+    const hud = document.createElement('div');
     hud.id = 'hud-cozy';
+    hud.className = 'nc2a-hud';
 
     hud.innerHTML = `
-        <div class="hud-identidade">
-            <div class="hud-logo">N</div>
-
-            <div>
-                <small>NÚCLEO DE COMPUTAÇÃO</small>
-                <strong>NC2A · Simulator</strong>
+        <section class="nc2a-canto-esquerdo" aria-label="Identidade e horário">
+            <div class="nc2a-identidade">
+                <div class="nc2a-logo" aria-hidden="true">N</div>
+                <div class="nc2a-identidade-textos">
+                    <span class="nc2a-subtitulo">Núcleo de Computação</span>
+                    <strong class="nc2a-nome">NC2A Simulator</strong>
+                </div>
             </div>
-        </div>
 
-        <div class="hud-horario">
-            ☀️ <span id="horario-jogo">--:--</span>
-        </div>
+            <div class="nc2a-relogio" aria-label="Horário">
+                <svg class="nc2a-calendario" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="0" />
+                    <path d="M3 9h18M8 3v4M16 3v4" />
+                    <path d="M7 13h2M12 13h2M7 17h2M12 17h2" />
+                </svg>
+                <time id="hud-horario" class="nc2a-hora">--:--</time>
+                <span class="nc2a-hora-divisor" aria-hidden="true"></span>
+                <span id="hud-periodo" class="nc2a-periodo">Expediente</span>
+            </div>
+        </section>
 
-        <div class="hud-missoes">
-            <button id="botao-missoes" type="button">
-                Missões ▾
+        <section id="painel-missoes" class="nc2a-missoes" aria-label="Lista de missões">
+            <button id="botao-missoes" class="nc2a-missoes-titulo"
+                    type="button" aria-controls="lista-missoes" aria-expanded="true"
+                    title="Recolher ou mostrar missões (M)">
+                <span>Missões</span>
+                <span id="hud-missoes-seta" class="nc2a-missoes-seta" aria-hidden="true">▾</span>
             </button>
+            <div id="lista-missoes" class="nc2a-missoes-lista"></div>
+        </section>
 
-            <div id="painel-missoes"
-                 class="hud-lista-missoes"
-                 hidden>
-                <ul id="lista-missoes"></ul>
+        <div id="hud-interacao" class="nc2a-interacao" hidden>
+            <kbd class="nc2a-interacao-tecla">E</kbd>
+            <div class="nc2a-interacao-conteudo">
+                <strong>Interagir</strong>
+                <span id="hud-interacao-nome">Objeto</span>
             </div>
         </div>
 
-        <div class="hud-inventario">
-            <button class="hud-slot" data-slot="0">1</button>
-            <button class="hud-slot" data-slot="1">2</button>
-            <button class="hud-slot" data-slot="2">3</button>
-            <button class="hud-slot" data-slot="3">4</button>
+        <div class="nc2a-hotbar" aria-label="Barra de itens">
+            <div class="nc2a-slot" data-slot="1"><span class="nc2a-slot-numero">1</span><span class="nc2a-slot-item"></span></div>
+            <div class="nc2a-slot" data-slot="2"><span class="nc2a-slot-numero">2</span><span class="nc2a-slot-item"></span></div>
+            <div class="nc2a-slot" data-slot="3"><span class="nc2a-slot-numero">3</span><span class="nc2a-slot-item"></span></div>
+            <div class="nc2a-slot" data-slot="4"><span class="nc2a-slot-numero">4</span><span class="nc2a-slot-item"></span></div>
         </div>
+
+        <div class="nc2a-controles" aria-label="Controles do jogo">
+            <div class="nc2a-controles-movimento">
+                <div class="nc2a-teclas">
+                    <div class="nc2a-teclas-cima">
+                        <kbd>W</kbd>
+                    </div>
+                    <div class="nc2a-teclas-baixo">
+                        <kbd>A</kbd>
+                        <kbd>S</kbd>
+                        <kbd>D</kbd>
+                    </div>
+                </div>
+
+                <span class="nc2a-controles-descricao">
+                    Movimentar
+                </span>
+            </div>
+
+            <div class="nc2a-controles-divisor"></div>
+
+            <div class="nc2a-controles-acao">
+                <kbd>M</kbd>
+                <span>Missões</span>
+            </div>
+        </div>
+
+        <div id="hud-toast-missao" class="nc2a-toast" role="status" aria-live="polite" hidden></div>
     `;
 
     document.body.appendChild(hud);
 
-    const painel = hud.querySelector('#painel-missoes');
+    const painelMissoes = hud.querySelector('#painel-missoes');
     const botaoMissoes = hud.querySelector('#botao-missoes');
-    const slots = [...hud.querySelectorAll('.hud-slot')];
+    const listaMissoes = hud.querySelector('#lista-missoes');
+    const setaMissoes = hud.querySelector('#hud-missoes-seta');
+    const elementoHorario = hud.querySelector('#hud-horario');
+    const elementoPeriodo = hud.querySelector('#hud-periodo');
+    const elementoInteracao = hud.querySelector('#hud-interacao');
+    const nomeInteracao = hud.querySelector('#hud-interacao-nome');
+    const toast = hud.querySelector('#hud-toast-missao');
+    const slots = [...hud.querySelectorAll('.nc2a-slot')];
 
-    let selecionado = -1;
+    let missoesVisiveis = true;
+    let assinaturaMissoes = null;
+    let tempoToast = null;
+    let horarioControladoPeloJogo = false;
+    let slotSelecionado = 0; // 0 = nenhum destaque
 
-    const canvas = document.getElementById('jogo');
-
-    const avisoInteracao = document.createElement('div');
-    avisoInteracao.id = 'hud-interacao';
-    avisoInteracao.hidden = true;
-
-    avisoInteracao.innerHTML = `
-        <span class="hud-interacao-tecla">E</span>
-
-        <div class="hud-interacao-texto">
-            <strong>Interagir</strong>
-            <small id="hud-interacao-nome"></small>
-        </div>
-    `;
-
-    // =====================================
-    // TOAST DE MISSÃO CONCLUÍDA
-    // =====================================
-    const hudToast = document.createElement('div');
-    hudToast.className = 'hud-toast-missao';
-    hudToast.hidden = true;
-    hud.appendChild(hudToast);
-
-    hud.appendChild(avisoInteracao);
-
-    const nomeInteracao = avisoInteracao.querySelector(
-        '#hud-interacao-nome'
-    );
-
-    // painel de missões aparece
     function alternarMissoes() {
-      painel.hidden = !painel.hidden;
-    }
-
-    function selecionarSlot(indice) {
-        selecionado = indice;
-
-        slots.forEach((slot, i) => {
-            slot.classList.toggle('ativo', i === selecionado);
-        });
+        missoesVisiveis = !missoesVisiveis;
+        painelMissoes.classList.toggle('nc2a-recolhido', !missoesVisiveis);
+        botaoMissoes.setAttribute('aria-expanded', String(missoesVisiveis));
+        setaMissoes.textContent = missoesVisiveis ? '▾' : '▸';
     }
 
     botaoMissoes.addEventListener('click', alternarMissoes);
 
-    slots.forEach((slot, indice) => {
-        slot.addEventListener('click', () => selecionarSlot(indice));
-    });
+    function atualizarHorario(hora, minuto, periodo) {
+        // Aceita Date, '09:10', (9, 10, 'Manhã') ou {hora:9, minuto:10, periodo:'Manhã'}.
+        let h;
+        let m;
+        let periodoExterno = periodo;
 
-    function aoPressionarTecla(evento) {
-        if (evento.repeat) return;
-
-        // painel abre quando clicar em M
-        if (evento.code === 'KeyM') {
-            evento.preventDefault();
-            alternarMissoes();
+        if (hora instanceof Date) {
+            h = hora.getHours();
+            m = hora.getMinutes();
+        } else if (typeof hora === 'string') {
+            const resultado = hora.match(/^(\d{1,2}):(\d{2})$/);
+            if (!resultado) return;
+            h = Number(resultado[1]);
+            m = Number(resultado[2]);
+        } else if (hora && typeof hora === 'object') {
+            h = Number(hora.hora ?? hora.horas ?? hora.hour);
+            m = Number(hora.minuto ?? hora.minutos ?? hora.minute ?? 0);
+            periodoExterno = hora.periodo ?? periodo;
+        } else if (typeof hora === 'number') {
+            h = hora;
+            m = minuto ?? 0;
+        } else {
             return;
         }
 
-        if (evento.code.startsWith('Digit')) {
-            const numero = Number(evento.code.slice(5));
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return;
+        if (h < 0 || h > 23 || m < 0 || m > 59) return;
 
-            if (numero >= 1 && numero <= 4) {
-                selecionarSlot(numero - 1);
+        horarioControladoPeloJogo = true;
+        elementoHorario.textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor(m)).padStart(2, '0')}`;
+        elementoPeriodo.textContent = periodoExterno || (h < 12 ? 'Manhã' : h < 18 ? 'Tarde' : 'Noite');
+    }
+
+    // Até o jogo definir um horário próprio, mostra a hora local do navegador.
+    function atualizarRelogioLocal() {
+        if (horarioControladoPeloJogo) return;
+        atualizarHorario(new Date());
+        horarioControladoPeloJogo = false;
+    }
+
+    atualizarRelogioLocal();
+    const intervaloRelogio = setInterval(atualizarRelogioLocal, 15_000);
+
+    function atualizarMissoes(missoes = []) {
+        const dados = (Array.isArray(missoes) ? missoes : []).map(missao => ({
+            id: String(missao.id ?? ''),
+            nome: String(missao.nome ?? missao.id ?? 'Missão sem nome'),
+            concluida: missao.concluida === true || missao.status === 'concluida'
+        }));
+
+        // principal.js pode chamar esta função a cada frame.
+        const assinaturaAtual = JSON.stringify(dados);
+        if (assinaturaAtual === assinaturaMissoes) return;
+        assinaturaMissoes = assinaturaAtual;
+
+        const fragmento = document.createDocumentFragment();
+
+        if (dados.length === 0) {
+            const vazio = document.createElement('div');
+            vazio.className = 'nc2a-missao-vazia';
+            vazio.textContent = 'Nenhuma missão atribuída';
+            fragmento.appendChild(vazio);
+        } else {
+            for (const missao of dados) {
+                const linha = document.createElement('div');
+                linha.className = `nc2a-missao${missao.concluida ? ' nc2a-missao-concluida' : ''}`;
+                linha.title = missao.nome;
+
+                const texto = document.createElement('span');
+                texto.className = 'nc2a-missao-nome';
+                texto.textContent = missao.nome;
+
+                const caixa = document.createElement('span');
+                caixa.className = 'nc2a-missao-check';
+                caixa.setAttribute('aria-label', missao.concluida ? 'Concluída' : 'Pendente');
+
+                linha.append(texto, caixa);
+                fragmento.appendChild(linha);
             }
         }
 
-        if (evento.code === 'Escape') {
-            painel.hidden = true;
+        listaMissoes.replaceChildren(fragmento);
+    }
+
+    function atualizarInteracao(objeto) {
+        if (!objeto) {
+            elementoInteracao.hidden = true;
+            return;
+        }
+
+        const nome = objeto.nome ?? objeto.name ?? objeto.id ?? 'Objeto';
+        nomeInteracao.textContent = recolherSubString(nome).replace(/[-_]+/g, ' ');
+        elementoInteracao.hidden = false;
+    }
+
+    function exibirToast(mensagem, tipo = 'conclusao') {
+        clearTimeout(tempoToast);
+
+        toast.classList.toggle(
+            'nc2a-toast-recebimento',
+            tipo === 'recebimento'
+        );
+
+        toast.textContent = mensagem;
+        toast.hidden = false;
+
+        tempoToast = setTimeout(() => {
+            toast.hidden = true;
+        }, 3500);
+    }
+
+    function mostrarConclusaoMissao(nome) {
+        exibirToast(`✓ Missão concluída: ${nome}`);
+    }
+
+    function mostrarRecebimentoMissoes(quantidade) {
+        if (quantidade <= 0) return;
+
+        const mensagem = quantidade === 1
+            ? 'Nova missão recebida'
+            : `${quantidade} novas missões recebidas`;
+
+        exibirToast(`▤ ${mensagem}`, 'recebimento');
+    }
+
+    function selecionarSlot(numero) {
+        slotSelecionado = numero >= 1 && numero <= 4 ? numero : 0;
+        for (const slot of slots) {
+            const selecionado = Number(slot.dataset.slot) === slotSelecionado;
+            slot.classList.toggle('nc2a-slot-selecionado', selecionado);
         }
     }
 
+    function atualizarInventario(itens = [], selecionado = slotSelecionado) {
+        for (let indice = 0; indice < 4; indice++) {
+            const item = itens[indice];
+            const conteudo = slots[indice].querySelector('.nc2a-slot-item');
+            conteudo.textContent = item ? String(item.nome ?? item.name ?? item) : '';
+        }
+        selecionarSlot(Number(selecionado));
+    }
+
+    function aoPressionarTecla(evento) {
+        const alvo = evento.target;
+        if (alvo?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+
+        if (evento.code === 'KeyM' && !evento.repeat) {
+            alternarMissoes();
+        }
+
+        const numero = /^Digit([1-4])$/.exec(evento.code)?.[1];
+        if (numero) selecionarSlot(Number(numero));
+    }
+
     document.addEventListener('keydown', aoPressionarTecla);
+    atualizarMissoes([]);
 
     return {
-        atualizarHorario(horario) {
-            hud.querySelector('#horario-jogo').textContent = horario;
-        },
+        atualizarHorario,
+        atualizarMissoes,
+        atualizarInteracao,
+        mostrarRecebimentoMissoes,
+        mostrarConclusaoMissao,
+        atualizarInventario,
+        selecionarSlot,
 
-        atualizarMissoes(missoes) {
-            const lista = document.querySelector('.hud-lista-missoes');
-            if (!lista) return;
-
-            if (!missoes || missoes.length === 0) {
-                lista.innerHTML = `<p class="hud-missao-vazia">Nenhuma missão ativa</p>`;
-                return;
-            }
-
-            lista.innerHTML = `
-                <ul class="hud-missoes-ul">
-                    ${missoes.map(missao => `
-                        <li class="hud-missao-item ${missao.concluida ? 'concluida' : ''}">
-                            <span class="hud-missao-bolinha">${missao.concluida ? '✓' : '•'}</span>
-                            <span class="hud-missao-nome">${missao.nome}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-            `;
-        },
-
-        atualizarInteracao(objeto) {
-            if (!objeto) {
-                avisoInteracao.hidden = true;
-                return;
-            }
-
-            const nomeObjeto = recolherSubString(objeto.nome);
-            nomeInteracao.textContent = nomeObjeto;
-            avisoInteracao.hidden = false;
-        },
-
-        estaComMissoesAbertas() {
-          return !painel.hidden;
-        },
-
-        mostrarConclusaoMissao(nomeMissao) {
-            hudToast.innerHTML = `
-                <div class="hud-toast-icone">✓</div>
-                <div class="hud-toast-texto">
-                    <strong>Missão concluída!</strong>
-                    <span>${nomeMissao}</span>
-                </div>
-            `;
-
-            hudToast.hidden = false;
-            hudToast.classList.remove('aparecendo');
-            void hudToast.offsetWidth; // reinicia animação
-            hudToast.classList.add('aparecendo');
-
-            clearTimeout(this._timeoutToast);
-            this._timeoutToast = setTimeout(() => {
-                hudToast.hidden = true;
-                hudToast.classList.remove('aparecendo');
-            }, 2600);
-        },
+        // O painel é permanente, não modal: não deve bloquear as interações do jogo.
+        estaComMissoesAbertas: () => false,
 
         destruir() {
             document.removeEventListener('keydown', aoPressionarTecla);
+            botaoMissoes.removeEventListener('click', alternarMissoes);
+            clearInterval(intervaloRelogio);
+            clearTimeout(tempoToast);
             hud.remove();
         }
     };

@@ -54,6 +54,7 @@ function obterNomeMissao(task) {
 
 async function iniciarJogo() {
   const estadoAnteriorMissoes = new Map();
+  let idsMissoesAnteriores = new Set();
   const hud = criarHUD();
   const modelos = await carregarModelos();
   const renderizador = criarRenderizador(
@@ -91,6 +92,20 @@ async function iniciarJogo() {
                 task.status === 'concluida'
         }));
 
+    const novasMissoes = minhasMissoes.filter(missao =>
+        !missao.concluida &&
+        !idsMissoesAnteriores.has(String(missao.id))
+    );
+
+    if (novasMissoes.length > 0) {
+        hud.mostrarRecebimentoMissoes(novasMissoes.length);
+    }
+
+    // Atualiza os IDs conhecidos para o próximo quadro.
+    idsMissoesAnteriores = new Set(
+        minhasMissoes.map(missao => String(missao.id))
+    );
+    
     // Verifica quais missões acabaram de ser concluídas.
     for (const missao of minhasMissoes) {
         const anterior = estadoAnteriorMissoes.get(missao.id);
