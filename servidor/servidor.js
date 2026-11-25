@@ -36,7 +36,8 @@ const TIPOS_ARQUIVOS = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
-  '.json': 'application/json; charset=utf-8'
+  '.json': 'application/json; charset=utf-8',
+  '.glb': 'model/gltf-binary'
 };
 
 // O servidor consegue localizar os arquivos compartilhados e de cliente
