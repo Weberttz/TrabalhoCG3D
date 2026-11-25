@@ -105,7 +105,7 @@ async function iniciarJogo() {
 
     // Carrega personagem animado.
     const personagemGLB = await carregarGLB(
-        './modelosGLB/personagem.glb'
+        './modelosGLB/personagem_textura.glb'
     );
 
     console.log(
