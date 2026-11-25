@@ -67,6 +67,19 @@ export const MAPA = Object.freeze([
                 cor: [0.65, 0.45, 0.30],
                 rotacaoY: 0,
                 solido: true,
+                interativo: false,
+            },
+            {
+                nome: 'radio01',
+                modelo: 'radio.obj',
+
+                x: 28.0,
+                y: 1,
+                z: 9.7,
+
+                cor: [0.5, 0.5, 0.5],
+                rotacaoY: 0,
+                solido: true,
                 interativo: true,
             },
             {
