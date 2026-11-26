@@ -9,8 +9,21 @@ const caminhosTexturas = {
   "radio.obj": "/texturas/radio_textura.jpg",
 };
 
+const ESCALA_V_RADIO = 15.9874773;
+
+const UV_RADIO = {
+  escala: [15.4639206, ESCALA_V_RADIO],
+  deslocamento: [
+    0.000523090363,
+    1 - ESCALA_V_RADIO - 0.000523090363
+  ]
+};
+
 const SHADER_VERTICE = `#version 300 es
 precision highp float;
+
+uniform vec2 uEscalaUV;
+uniform vec2 uDeslocamentoUV;
 
 in vec3 aPosicao;
 in vec2 aTextura;
@@ -31,7 +44,7 @@ void main() {
   vec4 posicaoMundo = uModelo * vec4(aPosicao, 1.0);
 
   vNormal = mat3(uModelo) * aNormal;
-  vTextura = aTextura;
+  vTextura = aTextura * uEscalaUV + uDeslocamentoUV;
 
   vDirecaoLuz = uPosicaoLuz - posicaoMundo.xyz;
   vDirecaoCamera = uPosicaoCamera - posicaoMundo.xyz;
@@ -325,6 +338,15 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     programa,
     "uUsarMapaEspecular"
   );
+  const uniformeEscalaUV = gl.getUniformLocation(
+    programa,
+    "uEscalaUV"
+  );
+
+  const uniformeDeslocamentoUV = gl.getUniformLocation(
+    programa,
+    "uDeslocamentoUV"
+  );
 
   const cubo = new Mesh(gl, verticesCubo(), null, null);
 
@@ -361,8 +383,19 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     matrizModelo,
     cor,
     textura,
-    material = null
+    material = null,
+    transformacaoUV = null,
   ) {
+    gl.uniform2fv(
+      uniformeEscalaUV,
+      transformacaoUV?.escala ?? [1, 1]
+    );
+
+    gl.uniform2fv(
+      uniformeDeslocamentoUV,
+      transformacaoUV?.deslocamento ?? [0, 0]
+    );
+
     gl.uniformMatrix4fv(uniformeMatriz, false, matrizFinal);
     gl.uniformMatrix4fv(uniformeModelo, false, matrizModelo);
     gl.uniform3fv(uniformeCor, cor);
@@ -398,8 +431,21 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
 
     gl.bindTexture(gl.TEXTURE_2D, textura);
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const repetir = String(caminhoTextura)
+      .includes("radio_textura.jpg");
+
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_S,
+      repetir ? gl.REPEAT : gl.CLAMP_TO_EDGE
+    );
+
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_T,
+      repetir ? gl.REPEAT : gl.CLAMP_TO_EDGE
+    );
+
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
@@ -542,7 +588,8 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             matrizModelo,
             corMaterial,
             texturaMaterial,
-            material
+            material,
+            objeto.modelo === "radio.obj" ? UV_RADIO : null
           );
         }
       }
