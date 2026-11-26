@@ -1,10 +1,14 @@
+
 export const leitorOBJ = {
     //carrega o .obj
     async carregarArquivo(caminho) {
         const resposta = await fetch(caminho)
 
         const texto = await resposta.text()
-        return this.parseOBJ(texto)
+        const obj = this.parseOBJ(texto)
+
+        obj.caminho = caminho
+        return obj
         //manda o conteudo do obj para o parser
     },
 
@@ -15,6 +19,22 @@ export const leitorOBJ = {
         const objNormais = [[]]
 
         const nomesObjetos = []
+        const materialLibs = []
+        const malhas = []
+
+        let materialAtual = null
+        let malha = null
+
+        function iniciarMalha() {
+            malha = {
+                material: materialAtual,
+                posicoes: [],
+                texturas: [],
+                normais: []
+            }
+
+            malhas.push(malha)
+        }
 
         //reune as listas de cada dado em uma so lista que representa o vertice completo
         const objVertices = [
@@ -40,7 +60,13 @@ export const leitorOBJ = {
                 const indiceObj = parseInt(indiceObjStr, 10)
                 const indice = indiceObj + (indiceObj > 0 ? 0 : objVertices[i].length)
 
-                webglVertices[i].push(...objVertices[i][indice])
+                const dados = objVertices[i][indice]
+
+                webglVertices[i].push(...dados)
+
+                if (i === 0) malha.posicoes.push(...dados)
+                if (i === 1) malha.texturas.push(...dados)
+                if (i === 2) malha.normais.push(...dados)
             })
 
         }
@@ -55,7 +81,16 @@ export const leitorOBJ = {
             vn (partes) {
                 objNormais.push(partes.map(parseFloat))
             },
+            mtllib (partes) {
+                materialLibs.push(...partes)
+            },
+            usemtl (partes) {
+                materialAtual = partes.join(" ")
+                iniciarMalha()
+            },
             f (partes) { //transforma as faces em triangulos p/ ficar no formato que o webgl desenha
+                if (!malha) iniciarMalha()
+
                 const numTriangulos = partes.length -2
                 for (let t = 0; t < numTriangulos; t++){
                     addVertice(partes[0])
@@ -79,12 +114,15 @@ export const leitorOBJ = {
             const handler = keywords[partes[0]]
             if(handler) handler(partes.slice(1))
         }
+
         return {
             posicoes : new Float32Array(webglVertices[0]),
             texturas : new Float32Array(webglVertices[1]),
             normais : new Float32Array(webglVertices[2]),
             totalVertices : webglVertices[0].length / 3,
-            objetos : nomesObjetos
+            objetos : nomesObjetos,
+            materialLibs,
+            malhas: malhas.filter(m => m.posicoes.length > 0)
         }
     
     }

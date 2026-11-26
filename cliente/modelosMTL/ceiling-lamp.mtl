@@ -1,0 +1,33 @@
+# Blender 5.2.0 LTS MTL File: 'None'
+# www.blender.org
+
+newmtl ceiling-lamp_body_pbr
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd ceiling-lamp_body_basecolor.jpg
+map_Pm ceiling-lamp_body_metallic-ceiling-lamp_body_roughness_metallic.jpg
+map_Pr ceiling-lamp_body_metallic-ceiling-lamp_body_roughness_roughness.jpg
+map_Bump -bm 1.000000 ceiling-lamp_body_normal.jpg
+
+newmtl ceiling-lamp_diffuser_glow_x
+Kd 0.964686 0.938686 0.896269
+Ks 0.500000 0.500000 0.500000
+Ke 1.290215 0.902272 0.235577
+Ni 1.500000
+d 1.000000
+illum 2
+Pr 0.350000
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000

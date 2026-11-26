@@ -47,6 +47,6 @@ export class Mesh{
         }
 
         // Manda a GPU desenhar todos os triângulos desta malha
-        gl.drawArrays(gl.TRIANGLES, 0, this.quantidadeVertices);
+        gl.drawArrays(gl.TRIANGLES, 0, this.qtdVertices);
     }
 }
