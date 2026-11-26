@@ -14,35 +14,22 @@ export const MAPA = Object.freeze([
         solido: true,
 
         objetos: [
-            /*
-            {
-                nome: 'mesa01',
-                modelo: 'mesa.obj',
-                x: 27.4,
-                y: 0,
-                z: 9.5,
-                cor: [0.65, 0.45, 0.30],
-                rotacaoY: 0,
-                solido: true,
-                interativo: false,
-            },
-            {
-                nome: 'cadeira01',
-                modelo: 'cadeira.obj',
-                x: 27.4,
-                y: 0,
-                z: 10.2,
-                cor: [0.25, 0.40, 0.65],
-                rotacaoY: 0,
-                solido: true,
-                interativo: false,
-            },
-            */
             {
                 nome: 'mesaEscritorio01',
                 modelo: 'office-desk.obj',
                 x: 27.4,
                 y: 0,
+                z: 9.5,
+                cor: [1, 1, 1],
+                rotacaoY: 0,
+                solido: true,
+                interativo: false,
+            },
+            {
+                nome: 'computador01',
+                modelo: 'computador2.obj',
+                x: 27.8,
+                y: 1.3,
                 z: 9.5,
                 cor: [1, 1, 1],
                 rotacaoY: 0,
@@ -88,20 +75,6 @@ export const MAPA = Object.freeze([
         solido: true,
 
         objetos: [
-            /*
-            {
-                nome: 'mesaEstudo01',
-                modelo: 'mesa.obj',
-                x: 28.0,
-                y: 0,
-                z: 9.7,
-                cor: [0.65, 0.45, 0.30],
-                rotacaoY: 0,
-                solido: true,
-                interativo: false,
-            },
-            */
-
             {
                 nome: 'mesaEscritorio02',
                 modelo: 'office-desk.obj',
