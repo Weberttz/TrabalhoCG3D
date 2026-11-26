@@ -50,3 +50,16 @@ export function enviarInteracao() {
 export function obterSessao() {
   return { meuId, estado, situacao };
 }
+
+export function enviarTrocaRadio() {
+    if (
+        conexao.readyState !== WebSocket.OPEN ||
+        meuId === null
+    ) {
+        return;
+    }
+
+    conexao.send(JSON.stringify({
+        tipo: 'radio_proxima'
+    }));
+}

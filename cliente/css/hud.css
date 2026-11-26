@@ -526,3 +526,59 @@
     .nc2a-missoes { top: 143px; }
     .nc2a-missoes-lista { max-height: 27vh; }
 }
+
+/* Comando adicional do rádio */
+
+.nc2a-interacao-extra {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    margin-left: 12px;
+    padding-left: 12px;
+
+    border-left: 1px solid rgba(255, 255, 255, 0.35);
+
+    color: #f2f0e9;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Respeita a visibilidade dos comandos */
+
+.nc2a-interacao-extra[hidden],
+.nc2a-interacao[hidden] {
+    display: none;
+}
+
+
+/* Prompt de interação com largura dinâmica */
+
+.nc2a-interacao {
+    width: max-content;
+    max-width: calc(100vw - 24px);
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+/* Texto "Próxima música" */
+
+.nc2a-interacao-extra span {
+    display: inline-block;
+    flex: 0 0 auto;
+
+    width: auto;
+    max-width: none;
+    overflow: visible;
+
+    white-space: nowrap;
+    color: #34373c;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 1;
+}
+
+.nc2a-interacao-extra[hidden] {
+    display: none !important;
+}

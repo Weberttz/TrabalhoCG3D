@@ -50,9 +50,16 @@ export function criarHUD() {
 
         <div id="hud-interacao" class="nc2a-interacao" hidden>
             <kbd class="nc2a-interacao-tecla">E</kbd>
+
             <div class="nc2a-interacao-conteudo">
-                <strong>Interagir</strong>
+                <strong>Ligar/Desligar</strong>
                 <span id="hud-interacao-nome">Objeto</span>
+            </div>
+
+            <!-- Aparece somente quando estiver olhando para o rádio -->
+            <div id="hud-comando-radio" class="nc2a-interacao-extra" hidden>
+                <kbd class="nc2a-interacao-tecla">T</kbd>
+                <span id="nc2a-interacao-conteudo">Próxima música</span>
             </div>
         </div>
 
@@ -104,6 +111,7 @@ export function criarHUD() {
     const nomeInteracao = hud.querySelector('#hud-interacao-nome');
     const toast = hud.querySelector('#hud-toast-missao');
     const slots = [...hud.querySelectorAll('.nc2a-slot')];
+    const comandoRadio = hud.querySelector('#hud-comando-radio');
 
     let missoesVisiveis = true;
     let assinaturaMissoes = null;
@@ -204,15 +212,27 @@ export function criarHUD() {
         listaMissoes.replaceChildren(fragmento);
     }
 
-    function atualizarInteracao(objeto) {
+    function atualizarInteracao(objeto, radioLigado = false) {
         if (!objeto) {
             elementoInteracao.hidden = true;
+            comandoRadio.hidden = true;
             return;
         }
 
-        const nome = objeto.nome ?? objeto.name ?? objeto.id ?? 'Objeto';
-        nomeInteracao.textContent = recolherSubString(nome).replace(/[-_]+/g, ' ');
+        const nome = String(
+            objeto.nome ?? objeto.name ?? objeto.id ?? 'Objeto'
+        );
+
+        const ehRadio = nome === 'radio01';
+
+        nomeInteracao.textContent = ehRadio
+            ? 'Rádio'
+            : recolherSubString(nome).replace(/[-_]+/g, ' ');
+
         elementoInteracao.hidden = false;
+
+        // T somente se estiver olhando para o rádio ligado.
+        comandoRadio.hidden = !(ehRadio && radioLigado);
     }
 
     function exibirToast(mensagem, tipo = 'conclusao') {

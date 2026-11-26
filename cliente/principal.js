@@ -21,8 +21,10 @@ import { leitorOBJ } from './leitorOBJ.js';
 import { carregarGLB } from './leitorGLB.js';
 import { criarHUD } from './hud.js';
 import { criarAnimadorGLB } from './animador.js';
+import { criarRadio } from './radio.js';
+import { enviarTrocaRadio } from './rede.js';
 
-// Carregamento dos modelos obj
+// Carregamento dos modelos obj 
 
 async function carregarModelos() {
     const modelos = {};
@@ -127,17 +129,62 @@ async function iniciarJogo() {
     );
 
     // Inicializa os controles apenas uma vez.
+    const radio = criarRadio(
+        '/audios/Reflections.mp3',
+        '/audios/DoIWannaKnow.mp3',
+        '/audios/DarkRed.mp3',
+    );
+
+    let objetoInterativoAtual = null;
+
     iniciarMouse(canvas);
 
+    // O clique no jogo libera a reprodução de áudio
+    // mesmo quando outro jogador ligou o rádio.
+    canvas.addEventListener('click', () => {
+        radio.habilitarAudio();
+    });
+
+    // E continua sendo a tecla de interação geral.
     configurarInteracao(() => {
+        radio.habilitarAudio();
+
+        // O servidor decide qual objeto foi acionado.
         enviarInteracao();
+    });
+
+    // T solicita a próxima música ao servidor.
+    window.addEventListener('keydown', evento => {
+        if (
+            evento.code !== 'KeyT' ||
+            evento.repeat
+        ) {
+            return;
+        }
+
+        if (evento.target?.closest?.(
+            'input, textarea, select, [contenteditable="true"]'
+        )) {
+            return;
+        }
+
+        if (
+            objetoInterativoAtual?.nome !== 'radio01' ||
+            !radio.estaLigado()
+        ) {
+            return;
+        }
+
+        evento.preventDefault();
+
+        radio.habilitarAudio();
+        enviarTrocaRadio();
     });
 
     const objetosInterativos = obterObjetosMapa()
         .filter(objeto => objeto.interativo);
 
     // Envio de teclas para o servidor
-
     setInterval(() => {
         const { anguloHorizontal } = obterOrientacao();
 
@@ -154,6 +201,9 @@ async function iniciarJogo() {
     function desenharQuadro(tempoAtual) {
         try {
             const { meuId, estado } = obterSessao();
+
+            // Atualiza a reprodução local conforme o estado global.
+            radio.sincronizar(estado?.radio);
 
             const jogadores = estado?.jogadores ?? [];
 
@@ -254,7 +304,8 @@ async function iniciarJogo() {
                 )
                 : null;
 
-            hud.atualizarInteracao(objetoProximo);
+            hud.atualizarInteracao(objetoProximo, radio.estaLigado());
+            objetoInterativoAtual = objetoProximo;
 
             // Animações do jogador
 
