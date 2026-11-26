@@ -6,6 +6,12 @@ import { Predio } from '../compartilhado/estruturaPredio.js';
 import { MAPA, obterObjetosMapa } from '../compartilhado/mapa.js';
 import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
 
+const MUSICAS_RADIO = [
+    '/audios/Reflections.mp3',
+    '/audios/DoIWannaKnow.mp3',
+    '/audios/DarkRed.mp3',
+];
+
 const DIRETORIO_ATUAL = path.dirname(
     fileURLToPath(import.meta.url)
 );
@@ -57,6 +63,13 @@ export class Jogo {
         this.instanciasColisao = [];
 
         this.inicializado = false;
+
+        this.radio = {
+            ligado: false,
+            indice: 0,
+            iniciadoEm: 0,
+            versao: 0
+        };
     }
 
     async inicializar() {
@@ -71,16 +84,16 @@ export class Jogo {
             const sala = this.andar.salas[descricao.sala];
 
             const objeto = descricao.interativo
-              ? sala.criarObjetoInterativo(
-                  descricao.nome,
-                  descricao.modelo,
-                  descricao.solido
-              )
-              : sala.criarObjeto(
-                  descricao.nome,
-                  descricao.modelo,
-                  descricao.solido
-              );
+                ? sala.criarObjetoInterativo(
+                    descricao.nome,
+                    descricao.modelo,
+                    descricao.solido
+                )
+                : sala.criarObjeto(
+                    descricao.nome,
+                    descricao.modelo,
+                    descricao.solido
+                );
 
             objeto.posicao = {
                 x: descricao.x,
@@ -142,6 +155,26 @@ export class Jogo {
             taskLixo.descartarLixo(jogador);
         });
 
+        this.definirFuncaoInteracao(
+            'Sala002',
+            'radio01',
+            () => {
+                this.radio.ligado = !this.radio.ligado;
+                this.radio.versao++;
+
+                if (this.radio.ligado) {
+                    this.radio.iniciadoEm = Date.now();
+                } else {
+                    this.radio.iniciadoEm = 0;
+                }
+
+                console.log(
+                    '[RÁDIO]',
+                    this.radio.ligado ? 'Ligado' : 'Desligado'
+                );
+            }
+        );
+
         this.inicializado = true;
     }
 
@@ -192,7 +225,7 @@ export class Jogo {
             id: this.proximoId++,
             cubo,
             conexao,
-            
+
             x: posicao.x,
             y: posicao.y,
             z: posicao.z,
@@ -394,6 +427,77 @@ export class Jogo {
         return true;
     }
 
+
+    podeControlarRadio(jogadorId) {
+        const jogador = this.jogadores.get(jogadorId);
+
+        const radio = this.andar.salas['Sala002']
+            ?.objetos['radio01'];
+
+        if (!jogador || !radio) {
+            return false;
+        }
+
+        if (jogador.andar !== 'Andar00') {
+            return false;
+        }
+
+        const dx = radio.posicao.x - jogador.x;
+        const dz = radio.posicao.z - jogador.z;
+
+        const distancia = Math.hypot(dx, dz);
+
+        // Somente jogadores a até 2 metros.
+        if (distancia > 2) {
+            return false;
+        }
+
+        // Exige que o jogador esteja olhando para o rádio.
+        if (distancia > 0.000001) {
+            const direcaoX = Math.sin(
+                jogador.anguloHorizontal
+            );
+
+            const direcaoZ = -Math.cos(
+                jogador.anguloHorizontal
+            );
+
+            const alinhamento =
+                (direcaoX * dx + direcaoZ * dz) / distancia;
+
+            const limite = Math.cos(35 * Math.PI / 180);
+
+            if (alinhamento < limite) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    proximaMusicaRadio(jogadorId) {
+        if (!this.radio.ligado) {
+            return false;
+        }
+
+        if (!this.podeControlarRadio(jogadorId)) {
+            return false;
+        }
+
+        this.radio.indice =
+            (this.radio.indice + 1) % MUSICAS_RADIO.length;
+
+        this.radio.iniciadoEm = Date.now();
+        this.radio.versao++;
+
+        console.log(
+            '[RÁDIO] Nova faixa:',
+            MUSICAS_RADIO[this.radio.indice]
+        );
+
+        return true;
+    }
+
     // Validação de colisão
     podeOcupar(jogador, x, z) {
         if (
@@ -411,9 +515,9 @@ export class Jogo {
 
             if (
                 Math.abs(x - outro.x) <
-                    CONFIGURACAO.tamanhoCubo &&
+                CONFIGURACAO.tamanhoCubo &&
                 Math.abs(z - outro.z) <
-                    CONFIGURACAO.tamanhoCubo
+                CONFIGURACAO.tamanhoCubo
             ) {
                 return false;
             }
@@ -528,7 +632,7 @@ export class Jogo {
         for (const jogador of this.jogadores.values()) {
             const teclas =
                 agora - jogador.instanteUltimaEntrada <=
-                CONFIGURACAO.tempoLimiteEntradaMs
+                    CONFIGURACAO.tempoLimiteEntradaMs
                     ? jogador.teclas
                     : TECLAS_SOLTAS;
 
@@ -612,15 +716,24 @@ export class Jogo {
                 z: Number(jogador.z.toFixed(4)),
                 teclas: Date.now() - jogador.instanteUltimaEntrada
                     <= CONFIGURACAO.tempoLimiteEntradaMs
-                        ? { ...jogador.teclas }
-                        : { w: false, a: false, s: false, d: false },
+                    ? { ...jogador.teclas }
+                    : { w: false, a: false, s: false, d: false },
 
                 anguloHorizontal: jogador.anguloHorizontal,
             })),
 
             tasks: [
                 ...this.tasks.values()
-            ].map(task => task.serializar())
+            ].map(task => task.serializar()),
+
+            radio: {
+                ligado: this.radio.ligado,
+                indice: this.radio.indice,
+                musica: MUSICAS_RADIO[this.radio.indice],
+                iniciadoEm: this.radio.iniciadoEm,
+                versao: this.radio.versao,
+                servidorAgora: Date.now()
+            },
         };
     }
 }

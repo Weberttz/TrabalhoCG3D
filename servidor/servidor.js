@@ -37,7 +37,8 @@ const TIPOS_ARQUIVOS = {
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.json': 'application/json; charset=utf-8',
-  '.glb': 'model/gltf-binary'
+  '.glb': 'model/gltf-binary',
+  '.mp3': 'audio/mpeg'
 };
 
 // O servidor consegue localizar os arquivos compartilhados e de cliente
@@ -190,7 +191,14 @@ servidorWebSocket.on('connection', conexao => {
       } else if (mensagem?.tipo === 'acao_task') {
         jogo.receberAcaoTask(jogador.id, mensagem);
       } else if (mensagem?.tipo === 'interagir') {
-        jogo.interagirComObjetoProximo(jogador.id);
+        if (jogo.interagirComObjetoProximo(jogador.id)) {
+          transmitirEstado();
+        }
+
+      } else if (mensagem?.tipo === 'radio_proxima') {
+        if (jogo.proximaMusicaRadio(jogador.id)) {
+          transmitirEstado();
+        }
       }
     } catch {
       // Um pacote inválido não deve derrubar o servidor.
