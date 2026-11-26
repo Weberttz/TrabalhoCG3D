@@ -1,0 +1,34 @@
+# Blender 5.2.0 LTS MTL File: 'None'
+# www.blender.org
+
+newmtl office-desk_body_pbr
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd office-desk_body_basecolor.jpg
+map_Pm office-desk_body_metallic-office-desk_body_roughness_metallic.jpg
+map_Pr office-desk_body_metallic-office-desk_body_roughness_roughness.jpg
+map_Bump -bm 1.000000 office-desk_body_normal.jpg
+
+newmtl office-desk_drawer_pbr
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd office-desk_drawer_basecolor.jpg
+map_Pm office-desk_drawer_metallic-office-desk_drawer_roughness_metallic.jpg
+map_Pr office-desk_drawer_metallic-office-desk_drawer_roughness_roughness.jpg
+map_Bump -bm 1.000000 office-desk_drawer_normal.jpg

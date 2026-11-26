@@ -1,91 +1,154 @@
 export const leitorOBJ = {
-    //carrega o .obj
     async carregarArquivo(caminho) {
-        const resposta = await fetch(caminho)
+        const resposta = await fetch(caminho);
 
-        const texto = await resposta.text()
-        return this.parseOBJ(texto)
-        //manda o conteudo do obj para o parser
+        if (!resposta.ok) {
+            throw new Error(`Erro ao carregar OBJ: ${caminho}`);
+        }
+
+        const texto = await resposta.text();
+        const obj = this.parseOBJ(texto);
+
+        obj.caminho = caminho;
+
+        return obj;
     },
 
-    parseOBJ(texto){
-        //guarda os dados lidos do arquivo .obj
-        const objPosicoes = [[]]
-        const objCoordTextura = [[]]
-        const objNormais = [[]]
+    parseOBJ(texto) {
+        const objPosicoes = [];
+        const objCoordTextura = [];
+        const objNormais = [];
 
-        const nomesObjetos = []
+        const materialLibs = [];
+        const geometrias = [];
 
-        //reune as listas de cada dado em uma so lista que representa o vertice completo
-        const objVertices = [
-            objPosicoes,
-            objCoordTextura,
-            objNormais
-        ]
+        let geometria;
+        let materialAtual = null;
 
-        //vai guardar os dados dos vertices na ordem q serao enviados pro webgl
-        const webglVertices = [
-            [],
-            [],
-            []
-        ]
+        function iniciarGeometria() {
+            geometria = {
+                material: materialAtual,
+                posicoes: [],
+                texturas: [],
+                normais: []
+            };
 
-        //busca os dados do vertice obj e adiciona nas listas do webgl
-        function addVertice(vertice) {
-            const ptn = vertice.split("/")
-
-                ptn.forEach((indiceObjStr, i) => {
-                    if(!indiceObjStr) return;
-
-                const indiceObj = parseInt(indiceObjStr, 10)
-                const indice = indiceObj + (indiceObj > 0 ? 0 : objVertices[i].length)
-
-                webglVertices[i].push(...objVertices[i][indice])
-            })
-
+            geometrias.push(geometria);
         }
-        //conjunto de funcoes para interpretar cada keyword do obj
-        const keywords = {
-            v (partes) {
-                objPosicoes.push(partes.map(parseFloat))
-            },
-            vt (partes) {
-                objCoordTextura.push(partes.map(parseFloat))
-            },
-            vn (partes) {
-                objNormais.push(partes.map(parseFloat))
-            },
-            f (partes) { //transforma as faces em triangulos p/ ficar no formato que o webgl desenha
-                const numTriangulos = partes.length -2
-                for (let t = 0; t < numTriangulos; t++){
-                    addVertice(partes[0])
-                    addVertice(partes[t + 1])
-                    addVertice(partes[t + 2])
-                }
-            },
-            o (partes) { //apenas guardando o nome da parte do objeto mas nao desenha individualmente
-                const nome = partes[0]
-                if(nome) nomesObjetos.push(nome)
+
+        function adicionarVertice(referencia) {
+            const indices = referencia.split("/");
+
+            const indicePosicao = parseInt(indices[0], 10);
+            const indiceTextura = indices[1]
+                ? parseInt(indices[1], 10)
+                : null;
+            const indiceNormal = indices[2]
+                ? parseInt(indices[2], 10)
+                : null;
+
+            function resolverIndice(indice, lista) {
+                return indice > 0
+                    ? indice - 1
+                    : lista.length + indice;
+            }
+
+            const posicao = objPosicoes[
+                resolverIndice(indicePosicao, objPosicoes)
+            ];
+
+            if (!posicao) {
+                throw new Error(`Índice de posição inválido: ${indicePosicao}`);
+            }
+
+            geometria.posicoes.push(...posicao);
+
+            if (indiceTextura !== null) {
+                const textura = objCoordTextura[
+                    resolverIndice(indiceTextura, objCoordTextura)
+                ];
+
+                geometria.texturas.push(...textura);
+            } else {
+                geometria.texturas.push(0, 0);
+            }
+
+            if (indiceNormal !== null) {
+                const normal = objNormais[
+                    resolverIndice(indiceNormal, objNormais)
+                ];
+
+                geometria.normais.push(...normal);
+            } else {
+                geometria.normais.push(0, 0, 0);
             }
         }
 
-        const linhas = texto.split("\n")
-        //leitura do arquivo linha por linha
-        for(let l = 0; l < linhas.length; l++){
-            const linha = linhas[l].trim()
-            if(!linha || linha.startsWith("#")) continue
-            
-            const partes = linha.split(/\s+/)
-            const handler = keywords[partes[0]]
-            if(handler) handler(partes.slice(1))
+        const keywords = {
+            v(partes) {
+                objPosicoes.push(partes.map(Number));
+            },
+
+            vt(partes) {
+                objCoordTextura.push(partes.map(Number));
+            },
+
+            vn(partes) {
+                objNormais.push(partes.map(Number));
+            },
+
+            mtllib(partes) {
+                materialLibs.push(...partes);
+            },
+
+            usemtl(partes) {
+                materialAtual = partes.join(" ");
+                iniciarGeometria();
+            },
+
+            o() {},
+
+            g() {},
+
+            f(partes) {
+                if (!geometria) {
+                    iniciarGeometria();
+                }
+
+                // Triangulação em leque.
+                for (let i = 1; i < partes.length - 1; i++) {
+                    adicionarVertice(partes[0]);
+                    adicionarVertice(partes[i]);
+                    adicionarVertice(partes[i + 1]);
+                }
+            }
+        };
+
+        const linhas = texto.split("\n");
+
+        for (const linhaOriginal of linhas) {
+            const linha = linhaOriginal.trim();
+
+            if (!linha || linha.startsWith("#")) continue;
+
+            const partes = linha.split(/\s+/);
+            const keyword = partes[0];
+            const argumentos = partes.slice(1);
+
+            const handler = keywords[keyword];
+
+            if (handler) {
+                handler(argumentos);
+            }
         }
+
+        const geometriasValidas = geometrias.filter(
+            geometria => geometria.posicoes.length > 0
+        );
+
         return {
-            posicoes : new Float32Array(webglVertices[0]),
-            texturas : new Float32Array(webglVertices[1]),
-            normais : new Float32Array(webglVertices[2]),
-            totalVertices : webglVertices[0].length / 3,
-            objetos : nomesObjetos
-        }
-    
+            materialLibs,
+            geometrias: geometriasValidas
+        };
     }
-}
+};

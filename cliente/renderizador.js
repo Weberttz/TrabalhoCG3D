@@ -62,8 +62,9 @@ void main() {
     vec3 corMaterial = uCor;
 
     if (uUsarTextura) {
-        corMaterial *= texture(uTextura, vTextura).rgb;
+      corMaterial *= texture(uTextura, vTextura).rgb;
     }
+
     vec3 pToLight = normalize(vDirecaoLuz);
     vec3 pToCam = normalize(vDirecaoCamera);
 
@@ -263,23 +264,30 @@ function verticesCubo() {
 // Mantemos uma única geometria-base, reutilizada por todos os móveis.
 function modeloCaixa(x, y, z, largura, altura, profundidade) {
   return new Float32Array([
-    largura / 0.8, 0, 0, 0,
-    0, altura / 0.8, 0, 0,
-    0, 0, profundidade / 0.8, 0,
-    x, y, z, 1,
+    largura / 0.8,
+    0,
+    0,
+    0,
+    0,
+    altura / 0.8,
+    0,
+    0,
+    0,
+    0,
+    profundidade / 0.8,
+    0,
+    x,
+    y,
+    z,
+    1,
   ]);
 }
 
 function escalaUniforme(s) {
-  return new Float32Array([
-    s, 0, 0, 0,
-    0, s, 0, 0,
-    0, 0, s, 0,
-    0, 0, 0, 1
-  ]);
+  return new Float32Array([s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1]);
 }
 
-export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
+export function criarRenderizador(canvas, modelos, personagemGLB = null) {
   const gl = canvas.getContext("webgl2", { antialias: true });
 
   if (!gl) {
@@ -314,18 +322,16 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
 
   const malhasOBJ = {};
 
-  // cria e armazena uma Mesh p/ cada obj carregado
-  for (const chave in modelos) {
-    const modelo = modelos[chave];
-
-    if (modelo && modelo.posicoes && modelo.posicoes.length > 0) {
-      malhasOBJ[chave] = new Mesh(
+  for (const [nome, modelo] of Object.entries(modelos)) {
+    malhasOBJ[nome] = modelo.geometrias.map((geometria) => ({
+      malha: new Mesh(
         gl,
-        modelo.posicoes,
-        modelo.texturas,
-        modelo.normais,
-      );
-    }
+        geometria.posicoes,
+        geometria.texturas,
+        geometria.normais,
+      ),
+      material: modelo.materiais?.[geometria.material] || null,
+    }));
   }
 
   // carrega as texturas associadas manualmente aos .objs
@@ -366,6 +372,7 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
 
   function carregarTextura(gl, caminhoTextura) {
     const textura = gl.createTexture();
+
     gl.bindTexture(gl.TEXTURE_2D, textura);
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -377,7 +384,6 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
 
     imagem.onload = () => {
       gl.bindTexture(gl.TEXTURE_2D, textura);
-
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
       gl.texImage2D(
@@ -388,15 +394,43 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
         gl.UNSIGNED_BYTE,
         imagem,
       );
-
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     };
 
     imagem.src = caminhoTextura;
+
     return textura;
+  }
+
+  function carregarTexturasMateriais(gl, modelo) {
+    const caminhoMTL = modelo.caminhosMTL?.[0];
+
+    if (!caminhoMTL) return;
+
+    const cacheTexturas = {};
+    const materiais = Object.values(modelo.materiais ?? {});
+
+    for (const material of materiais) {
+      for (const propriedade of ["diffuseMap", "normalMap"]) {
+        const arquivo = material[propriedade];
+
+        if (!arquivo) continue;
+
+        let textura = cacheTexturas[arquivo];
+
+        if (!textura) {
+          const caminhoTextura = new URL(`../texturas/${arquivo}`, caminhoMTL);
+
+          textura = carregarTextura(gl, caminhoTextura.href);
+          cacheTexturas[arquivo] = textura;
+        }
+
+        material[propriedade] = textura;
+      }
+    }
+  }
+
+  for (const modelo of Object.values(modelos)) {
+    carregarTexturasMateriais(gl, modelo);
   }
 
   const desenhadorPersonagem = personagemGLB
@@ -407,10 +441,7 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
 
   return {
     definirMatrizesOssos(id, matrizes) {
-      matrizesOssosPorJogador.set(
-        String(id),
-        matrizes
-      );
+      matrizesOssosPorJogador.set(String(id), matrizes);
     },
 
     removerMatrizesOssos(id) {
@@ -462,24 +493,34 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
       const camera = multiplicar(projecao, olharPara(olho, alvo));
 
       for (const objeto of objetos) {
-        const malhaOBJ = malhasOBJ[objeto.modelo];
-
-        // Matriz de translação.
         const matrizTranslacao = translacao(objeto.x, objeto.y, objeto.z);
 
-        // Matriz de rotação.
         const matrizRotacao = rotacaoY(objeto.rotacaoY ?? 0);
 
-        // Aplica a rotação e depois a translação.
         const matrizModelo = multiplicar(matrizTranslacao, matrizRotacao);
 
         const matrizFinal = multiplicar(camera, matrizModelo);
 
-        // procura a textura associada ao arquivo obj
         const textura = texturasOBJ[objeto.modelo] ?? null;
+
         const cor = textura ? [1.0, 1.0, 1.0] : (objeto.cor ?? [0.7, 0.7, 0.7]);
 
-        desenharMalha(malhaOBJ, matrizFinal, matrizModelo, cor, textura);
+        const partes = malhasOBJ[objeto.modelo];
+
+        for (const parte of partes) {
+          const material = parte.material;
+
+          const texturaMaterial = material?.diffuseMap || textura;
+          const corMaterial = material?.diffuse || cor;
+
+          desenharMalha(
+            parte.malha,
+            matrizFinal,
+            matrizModelo,
+            corMaterial,
+            texturaMaterial,
+          );
+        }
       }
 
       for (const jogador of jogadores) {
@@ -501,38 +542,26 @@ export function criarRenderizador(canvas, modelos = {}, personagemGLB = null) {
           );
 
           // subtrai de 180º o angulo e ajusta renderização frontal do personagem
-          const rotacao = rotacaoY(
-            Math.PI - angulo
-          );
+          const rotacao = rotacaoY(Math.PI - angulo);
 
           const matrizModelo = multiplicar(
             posicao,
-            multiplicar(
-              rotacao,
-              escalaUniforme(escala)
-            )
+            multiplicar(rotacao, escalaUniforme(escala)),
           );
 
-          const matrizMVP = multiplicar(
-            camera,
-            matrizModelo
-          );
+          const matrizMVP = multiplicar(camera, matrizModelo);
 
           desenhadorPersonagem.desenhar(
             matrizMVP,
             matrizModelo,
             matrizesJogador,
           );
-
         } else {
           // Cubo original enquanto o GLB não estiver disponível.
-          const matrizModelo = translacao(
-            jogador.x, 0.4, jogador.z
-          );
+          const matrizModelo = translacao(jogador.x, 0.4, jogador.z);
 
-          const cor = jogador.cubo === 0
-          ? [0.16, 0.76, 0.94] 
-          : [1.0, 0.57, 0.22];
+          const cor =
+            jogador.cubo === 0 ? [0.16, 0.76, 0.94] : [1.0, 0.57, 0.22];
 
           desenharMalha(
             cubo,
