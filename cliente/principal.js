@@ -166,7 +166,7 @@ async function iniciarJogo() {
   });
 
   const objetosInterativos = obterObjetosMapa()
-    .filter(objeto => objeto.interativo);
+    .filter(objeto => objeto.interativo && !objeto.item);
 
   // Envio de teclas para o servidor
   setInterval(() => {

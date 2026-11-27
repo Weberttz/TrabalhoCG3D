@@ -55,7 +55,9 @@ function localizarArquivo(url) {
   const compartilhados = [
     'mapa.js',
     'constantesTasks.js',
-    'estruturaPredio.js'
+    'estruturaPredio.js',
+    'catalogoNC2A.js',
+    'mobiliarioNC2A.js'
   ];
 
   if (compartilhados.includes(caminhoURL.slice(1))) {
@@ -203,9 +205,9 @@ servidorWebSocket.on('connection', conexao => {
         if (jogo.soltarItemJogador(jogador.id)) {
           transmitirEstado();
         }
-      }else if (mensagem?.tipo === 'porta_interagir') {
+      } else if (mensagem?.tipo === 'porta_interagir') {
         if (jogo.alternarPorta(jogador.id, mensagem.nome)) {
-            transmitirEstado();
+          transmitirEstado();
         }
       }
     } catch {

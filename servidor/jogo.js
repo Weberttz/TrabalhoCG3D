@@ -3,8 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
 import { Predio } from '../compartilhado/estruturaPredio.js';
-import { MAPA, obterObjetosMapa } from '../compartilhado/mapa.js';
+import { MAPA, obterObjetosMapa, obterSalaEmPosicao } from '../compartilhado/mapa.js';
 import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
+import { catalogarNC2A } from '../compartilhado/classificadorNC2A.js';
 
 const MUSICAS_RADIO = [
     '/audios/Reflections.mp3',
@@ -54,7 +55,7 @@ export class Jogo {
         this.tasks = new Map();
         this.portas = new Map();
 
-        this.predio = new Predio('CCT');
+        this.predio = new Predio('NC2A');
 
         this.andar = this.predio.criarAndar('Andar00');
 
@@ -75,17 +76,85 @@ export class Jogo {
     }
 
     async inicializar() {
-        // Primeiro cria as salas.
-        for (const descricao of MAPA) {
-            this.andar.criarSala(descricao.nome);
+
+        // 1. Carrega a estrutura principal do prédio apenas uma vez.
+        const caminhoEstrutura = path.resolve(
+            DIRETORIO_ATUAL,
+            '../cliente/modelosOBJ/nc2a.obj'
+        );
+
+        const geometriaEstrutura =
+            await carregarColisoesOBJ(caminhoEstrutura);
+
+        this.modelosColisao.set(
+            'nc2a.obj',
+            geometriaEstrutura
+        );
+
+        // 2. Identifica automaticamente os andares,
+        // salas, paredes e portas a partir do OBJ.
+        this.catalogo = catalogarNC2A(
+            geometriaEstrutura.nomesObjetos
+        );
+
+        // 3. Cria a estrutura hierárquica no servidor.
+        for (const descricaoAndar of Object.values(
+            this.catalogo.andares
+        )) {
+            const andar = this.predio.criarAndar(
+                descricaoAndar.nome
+            );
+
+            for (const descricaoSala of Object.values(
+                descricaoAndar.salas
+            )) {
+                const sala = andar.criarSala(
+                    descricaoSala.nome,
+                    descricaoSala.categoria
+                );
+
+                sala.partesEstruturais =
+                    descricaoSala.partesEstruturais;
+
+                sala.portas = descricaoSala.portas;
+            }
         }
 
-        // Depois registra cada objeto em sua sala.
-        for (const descricao of obterObjetosMapa()) {
+        // 4. Aplica as configurações específicas de cada
+        // sala, incluindo categoria, âncora e limites.
+        for (const descricao of MAPA) {
+            const nomeAndar = descricao.andar ?? 'Andar00';
 
-            const sala = this.andar.salas[descricao.sala];
+            const andar = this.predio.criarAndar(nomeAndar);
+
+            const sala = andar.criarSala(
+                descricao.nome,
+                descricao.categoria ?? 'generica'
+            );
+
+            sala.ancora = descricao.ancora ?? null;
+            sala.limites = descricao.area ?? null;
+
+            const registroCatalogo =
+                this.catalogo.andares[nomeAndar]
+                    ?.salas[descricao.nome];
+
+            if (registroCatalogo && descricao.categoria) {
+                registroCatalogo.categoria = descricao.categoria;
+            }
+        }
+
+        // 5. Registra a mobília e os objetos interativos
+        // dentro de seus respectivos andares e salas.
+        for (const descricao of obterObjetosMapa()) {
+            const nomeAndar = descricao.andar ?? 'Andar00';
+
+            const andar = this.predio.criarAndar(nomeAndar);
+
+            const sala = andar.criarSala(descricao.sala);
 
             let objeto;
+
             if (descricao.item) {
                 objeto = sala.criarItem(
                     descricao.nome,
@@ -119,9 +188,17 @@ export class Jogo {
 
             objeto.rotacaoY = descricao.rotacaoY ?? 0;
 
-            if (!objeto.temColisao || objeto.ehBloco || !descricao.modelo) continue;
+            // Objetos sem colisão não precisam carregar
+            // geometria de colisão.
+            if (
+                !objeto.temColisao ||
+                objeto.ehBloco ||
+                !descricao.modelo
+            ) {
+                continue;
+            }
 
-            // Reutiliza a geometria se já estiver carregada.
+            // Modelos iguais compartilham a mesma geometria.
             if (!this.modelosColisao.has(descricao.modelo)) {
                 const caminho = path.resolve(
                     DIRETORIO_ATUAL,
@@ -150,23 +227,43 @@ export class Jogo {
 
         this.criarPortasDaEstrutura();
 
+        // Diagnóstico.
+        for (const andar of Object.values(
+            this.predio.andares
+        )) {
+            console.log(
+                `[NC2A] ${andar.nome}:`,
+                Object.keys(andar.salas).length,
+                'salas'
+            );
+
+            for (const sala of Object.values(andar.salas)) {
+                console.log(
+                    `  ${sala.nome}`,
+                    `[${sala.categoria}]`,
+                    `${Object.keys(sala.objetos).length} objetos`
+                );
+            }
+        }
+
         const taskLixo = new TaskJogarLixo({
             id: 'task_lixo_sala002',
             jogadorId: null,
-            x: 31.7,
-            z: 10.8
+            x: 30.5,
+            z: 10.6
         });
         this.tasks.set(taskLixo.id, taskLixo);
 
         // 1. Interagir com a mesa atribui a task ao jogador (muda para EM_ANDAMENTO)
-        this.definirFuncaoInteracao('Sala002', 'mesaEstudo01', (objeto, jogador) => {
-            if (taskLixo.status === 'pendente') {
-                console.log(`[Task ${taskLixo.id}] Jogador ${jogador.id} pegou o lixo da mesa!`);
-                taskLixo.atribuirPara(jogador);
-            } else {
-                console.log(`[Task ${taskLixo.id}] Mesa já utilizada (status atual: ${taskLixo.status}).`);
+        this.definirFuncaoInteracao(
+            'Sala002',
+            'mesaEscritorio01',
+            (objeto, jogador) => {
+                if (taskLixo.status === 'pendente') {
+                    taskLixo.atribuirPara(jogador);
+                }
             }
-        });
+        );
 
         // 2. Interagir com a lixeira conclui a task (muda para CONCLUIDA)
         this.definirFuncaoInteracao('Sala002', 'lixeira01', (objeto, jogador) => {
@@ -174,7 +271,7 @@ export class Jogo {
         });
 
         this.definirFuncaoInteracao(
-            'nc2a',
+            'Sala002',
             'radio01',
             () => {
                 this.radio.ligado = !this.radio.ligado;
@@ -193,7 +290,7 @@ export class Jogo {
             }
         );
 
-        this.configurarEventosItem('Sala001', 'blocoTeste01', {
+        this.configurarEventosItem('Sala002', 'blocoTeste01', {
             aoPegar: (item, jogador) => {
                 console.log(`[Item] Jogador ${jogador.id} pegou "${item.nome}"`);
             },
@@ -228,10 +325,10 @@ export class Jogo {
         const agora = Date.now();
 
         const posicoesIniciais = [
-            { x: 28.5, y: 0, z: 8 },
-            { x: 30.5, y: 0, z: 8 },
-            { x: 29.5, y: 0, z: 6 },
-            { x: 29.5, y: 0, z: 10 }
+            { x: 27.5, y: 0, z: 2.5 },
+            { x: 29.0, y: 0, z: 2.5 },
+            { x: 23.5, y: 0, z: 2.5 },
+            { x: 35.0, y: 0, z: 2.5 }
         ];
 
         const posicao = posicoesIniciais.find(posicao =>
@@ -585,12 +682,24 @@ export class Jogo {
         const jogador = this.jogadores.get(jogadorId);
         if (!jogador || !jogador.itemSegurado) return false;
 
-        for (const sala of Object.values(this.andar.salas)) {
-            const item = sala.objetos[jogador.itemSegurado];
-            if (item && typeof item.soltar === 'function') {
-                item.soltar(posicao ?? { x: jogador.x, y: 0.2, z: jogador.z }, podePegar, jogador);
-                jogador.itemSegurado = null;
-                return true;
+        for (const andar of Object.values(this.predio.andares)) {
+            for (const sala of Object.values(andar.salas)) {
+                const item = sala.objetos[jogador.itemSegurado];
+
+                if (item && typeof item.soltar === 'function') {
+                    item.soltar(
+                        posicao ?? {
+                            x: jogador.x,
+                            y: jogador.y + 0.2,
+                            z: jogador.z
+                        },
+                        podePegar,
+                        jogador
+                    );
+
+                    jogador.itemSegurado = null;
+                    return true;
+                }
             }
         }
         return false;
@@ -599,7 +708,8 @@ export class Jogo {
     podeControlarRadio(jogadorId) {
         const jogador = this.jogadores.get(jogadorId);
 
-        const radio = this.andar.salas['nc2a']
+        const radio = this.predio.andares['Andar00']
+            ?.salas['Sala002']
             ?.objetos['radio01'];
 
         if (!jogador || !radio) {
@@ -691,21 +801,9 @@ export class Jogo {
             }
         }
 
-        // Obtém a sala correspondente ao jogador.
-        const andar = this.predio.andares[jogador.andar];
-
-        if (!andar) {
-            return false;
-        }
-
-        const sala = andar.salas[jogador.sala];
-
-        if (!sala) {
-            return false;
-        }
-
-        // Colisão com os OBJ da sala.
-        for (const objeto of Object.values(sala.objetos)) {
+        // Todas as instâncias sólidas participam da colisão,
+        // independentemente da sala à qual pertencem.
+        for (const objeto of this.instanciasColisao) {
             if (
                 !objeto.temColisao ||
                 !objeto.colisaoOBJ
@@ -719,19 +817,24 @@ export class Jogo {
                 z: objetoZ
             } = objeto.posicao;
 
-            // Transforma posição global em local.
             const xLocal = x - objetoX;
             const yLocal = jogador.y - objetoY;
             const zLocal = z - objetoZ;
 
-            if (
+            const bloqueado =
                 objeto.colisaoOBJ.posicaoBloqueada(
                     xLocal,
                     yLocal,
                     zLocal,
-                    objeto.mesh === 'nc2a.obj' ? this.portas : null
-                )
-            ) {
+
+                    // As portas continuam usando seus
+                    // colisores dinâmicos.
+                    objeto.mesh === 'nc2a.obj'
+                        ? this.portas
+                        : null
+                );
+
+            if (bloqueado) {
                 return false;
             }
         }
@@ -853,6 +956,21 @@ export class Jogo {
             );
         }
 
+        // Atualiza a localização lógica de cada jogador.
+        for (const jogador of this.jogadores.values()) {
+            const andar = jogador.y >= 3.5
+                ? 'Andar01'
+                : 'Andar00';
+
+            jogador.andar = andar;
+
+            jogador.sala = obterSalaEmPosicao(
+                andar,
+                jogador.x,
+                jogador.z
+            );
+        }
+
         // Tasks atualizam independentemente do WASD.
         for (const task of this.tasks.values()) {
             const dono =
@@ -883,6 +1001,9 @@ export class Jogo {
 
                 x: Number(jogador.x.toFixed(4)),
                 z: Number(jogador.z.toFixed(4)),
+                y: Number(jogador.y.toFixed(4)),
+                andar: jogador.andar,
+                sala: jogador.sala,
                 teclas: Date.now() - jogador.instanteUltimaEntrada
                     <= CONFIGURACAO.tempoLimiteEntradaMs
                     ? { ...jogador.teclas }
@@ -895,23 +1016,31 @@ export class Jogo {
                 ...this.tasks.values()
             ].map(task => task.serializar()),
 
-            itens: Object.values(this.andar.salas).flatMap(sala =>
-                Object.values(sala.objetos)
-                    .filter(obj => 'podePegar' in obj)
-                    .map(item => ({
-                        nome: item.nome,
-                        sala: sala.nome,
-                        ehBloco: item.ehBloco,
-                        modelo: item.mesh,
-                        cor: item.cor,
-                        tamanho: item.tamanho,
-                        x: item.posicao.x,
-                        y: item.posicao.y,
-                        z: item.posicao.z,
-                        visivel: item.visivel,
-                        podePegar: item.podePegar,
-                        seguradoPor: item.seguradoPor
-                    }))
+            itens: Object.values(this.predio.andares).flatMap(
+                andar =>
+                    Object.values(andar.salas).flatMap(
+                        sala =>
+                            Object.values(sala.objetos)
+                                .filter(obj => 'podePegar' in obj)
+                                .map(item => ({
+                                    nome: item.nome,
+                                    andar: andar.nome,
+                                    sala: sala.nome,
+
+                                    ehBloco: item.ehBloco,
+                                    modelo: item.mesh,
+                                    cor: item.cor,
+                                    tamanho: item.tamanho,
+
+                                    x: item.posicao.x,
+                                    y: item.posicao.y,
+                                    z: item.posicao.z,
+
+                                    visivel: item.visivel,
+                                    podePegar: item.podePegar,
+                                    seguradoPor: item.seguradoPor
+                                }))
+                    )
             ),
 
             radio: {

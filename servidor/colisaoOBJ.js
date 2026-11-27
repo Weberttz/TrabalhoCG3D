@@ -166,7 +166,7 @@ export async function carregarColisoesOBJ(caminho) {
         totalObjetos: objetos.length,
         totalColisores: colisores.length,
         colisores,
-
+        nomesObjetos: objetos.map(objeto => objeto.nome),
         detectarColisao,
 
         posicaoBloqueada(x, y, z, portas = null) {

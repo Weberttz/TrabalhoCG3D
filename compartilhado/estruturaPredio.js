@@ -1,46 +1,59 @@
 
 
-export class Predio{
-    constructor(nome){
+export class Predio {
+    constructor(nome) {
         this.nome = nome;
         this.andares = {};
         this.andarAtual = 0;
     }
 
-    criarAndar(nomeAndar){
-        if(!this.andares[nomeAndar]){
+    criarAndar(nomeAndar) {
+        if (!this.andares[nomeAndar]) {
             this.andares[nomeAndar] = new Andar(nomeAndar);
         }
         return this.andares[nomeAndar];
     }
 
-    subir(){
+    subir() {
         this.andarAtual = 1;
     }
-    descer(){
+    descer() {
         this.andarAtual = 0;
     }
 }
 
-export class Andar{
-    constructor(nome){
+export class Andar {
+    constructor(nome) {
         this.nome = nome;
         this.salas = {};
     }
-    criarSala(nomeSala){
-        if(!this.salas[nomeSala]){
-            this.salas[nomeSala] = new Sala(nomeSala);
+    criarSala(nomeSala, categoria = 'generica') {
+        if (!this.salas[nomeSala]) {
+            this.salas[nomeSala] = new Sala(
+                nomeSala,
+                categoria
+            );
+        } else if (categoria !== 'generica') {
+            this.salas[nomeSala].categoria = categoria;
         }
+
         return this.salas[nomeSala];
     }
 }
 
 export class Sala {
-    constructor(nome) {
+    constructor(nome, categoria = 'generica') {
         this.nome = nome;
+        this.categoria = categoria;
+
         this.mesh = null;
         this.objetos = {};
-        this.limites = {};
+
+        this.limites = null;
+        this.ancora = null;
+
+        this.partesEstruturais = [];
+        this.portas = [];
     }
 
     criarObjeto(nomeObjeto, mesh, temColisao = true) {
@@ -102,15 +115,15 @@ export class Objeto {
 }
 
 
-export class ObjetoInterativo extends Objeto{
-    constructor(nome, mesh, temColisao, funcaoDeInteracao){
+export class ObjetoInterativo extends Objeto {
+    constructor(nome, mesh, temColisao, funcaoDeInteracao) {
         super(nome, mesh, temColisao);
         this.acao = funcaoDeInteracao;
     }
     //a funcao de interacao é recebida na criacao do objeto
-    interagir(jogador){
-        if(typeof this.acao == 'function'){
-            this.acao(this,jogador);
+    interagir(jogador) {
+        if (typeof this.acao == 'function') {
+            this.acao(this, jogador);
         }
     }
 }

@@ -559,7 +559,11 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
       );
 
       const olho = meuJogador
-        ? [meuJogador.x, ALTURA_CAMERA, meuJogador.z]
+        ? [
+          meuJogador.x,
+          (meuJogador.y ?? 0) + ALTURA_CAMERA,
+          meuJogador.z
+        ]
         : [0, 2, 3];
 
       const { anguloHorizontal, anguloVertical } = orientacao;
