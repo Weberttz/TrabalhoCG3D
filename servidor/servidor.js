@@ -203,6 +203,10 @@ servidorWebSocket.on('connection', conexao => {
         if (jogo.soltarItemJogador(jogador.id)) {
           transmitirEstado();
         }
+      }else if (mensagem?.tipo === 'porta_interagir') {
+        if (jogo.alternarPorta(jogador.id, mensagem.nome)) {
+            transmitirEstado();
+        }
       }
     } catch {
       // Um pacote inválido não deve derrubar o servidor.

@@ -52,6 +52,7 @@ export class Jogo {
         this.passo = 0;
 
         this.tasks = new Map();
+        this.portas = new Map();
 
         this.predio = new Predio('CCT');
 
@@ -146,6 +147,8 @@ export class Jogo {
 
             this.instanciasColisao.push(objeto);
         }
+
+        this.criarPortasDaEstrutura();
 
         const taskLixo = new TaskJogarLixo({
             id: 'task_lixo_sala002',
@@ -445,6 +448,118 @@ export class Jogo {
         return true;
     }
 
+
+    criarPortasDaEstrutura() {
+        const estrutura = this.andar.salas['nc2a']
+            ?.objetos['nc2a_estrutura'];
+
+        if (!estrutura?.colisaoOBJ) {
+            throw new Error('Estrutura nc2a não encontrada.');
+        }
+
+        for (const caixa of estrutura.colisaoOBJ.colisores) {
+            if (!caixa.nome.includes('__Int__Porta')) {
+                continue;
+            }
+
+            const centroX = (caixa.minimoX + caixa.maximoX) / 2;
+            const centroY = (caixa.minimoY + caixa.maximoY) / 2;
+            const centroZ = (caixa.minimoZ + caixa.maximoZ) / 2;
+
+            const larguraX = caixa.maximoX - caixa.minimoX;
+            const larguraZ = caixa.maximoZ - caixa.minimoZ;
+
+            // Descobre em qual eixo a porta possui maior largura.
+            const portaNoEixoX = larguraX >= larguraZ;
+
+            // Pivô na borda da porta, não no centro.
+            const pivoX = portaNoEixoX
+                ? caixa.minimoX
+                : centroX;
+
+            const pivoZ = portaNoEixoX
+                ? centroZ
+                : caixa.minimoZ;
+
+            // Sentido inicial de abertura.
+            // Pode ser ajustado individualmente depois.
+            const sentido = portaNoEixoX
+                ? (centroZ >= 0 ? -1 : 1)
+                : (centroX >= 0 ? 1 : -1);
+
+            this.portas.set(caixa.nome, {
+                nome: caixa.nome,
+
+                // Posição global para interação.
+                x: centroX + estrutura.posicao.x,
+                y: centroY + estrutura.posicao.y,
+                z: centroZ + estrutura.posicao.z,
+
+                // Pivô local do arquivo OBJ.
+                pivoX,
+                pivoZ,
+
+                sentido,
+                aberta: false,
+                ultimaInteracaoEm: 0
+            });
+        }
+
+        console.log(
+            `[PORTAS] ${this.portas.size} portas encontradas.`
+        );
+    }
+
+    alternarPorta(jogadorId, nomePorta) {
+        const jogador = this.jogadores.get(jogadorId);
+        const porta = this.portas.get(nomePorta);
+
+        if (!jogador || !porta) return false;
+
+        const dx = porta.x - jogador.x;
+        const dz = porta.z - jogador.z;
+        const distancia = Math.hypot(dx, dz);
+
+        if (distancia > 2) return false;
+
+        // Impede interação entre andares diferentes.
+        const alturaOlhos = (jogador.y ?? 0) + 1.25;
+
+        if (Math.abs(alturaOlhos - porta.y) > 1.75) {
+            return false;
+        }
+
+        // Valida se o jogador olha para a porta.
+        if (distancia > 0.000001) {
+            const direcaoX = Math.sin(jogador.anguloHorizontal);
+            const direcaoZ = -Math.cos(jogador.anguloHorizontal);
+
+            const alinhamento =
+                (direcaoX * dx + direcaoZ * dz) / distancia;
+
+            if (alinhamento < Math.cos(35 * Math.PI / 180)) {
+                return false;
+            }
+        }
+
+        const agora = Date.now();
+
+        // Evita abrir/fechar repetidamente muito rápido.
+        if (agora - porta.ultimaInteracaoEm < 350) {
+            return false;
+        }
+
+        porta.ultimaInteracaoEm = agora;
+        porta.aberta = !porta.aberta;
+
+        console.log(
+            `[PORTA] ${porta.nome}:`,
+            porta.aberta ? 'Aberta' : 'Fechada'
+        );
+
+        return true;
+    }
+
     definirFuncaoInteracao(nomeSala, nomeObjeto, funcaoDeInteracao) {
         const objeto = this.andar.salas[nomeSala]?.objetos[nomeObjeto];
         if (!objeto || typeof objeto.interagir !== 'function') return false;
@@ -480,7 +595,6 @@ export class Jogo {
         }
         return false;
     }
-
 
     podeControlarRadio(jogadorId) {
         const jogador = this.jogadores.get(jogadorId);
@@ -614,7 +728,8 @@ export class Jogo {
                 objeto.colisaoOBJ.posicaoBloqueada(
                     xLocal,
                     yLocal,
-                    zLocal
+                    zLocal,
+                    objeto.mesh === 'nc2a.obj' ? this.portas : null
                 )
             ) {
                 return false;
@@ -807,6 +922,16 @@ export class Jogo {
                 versao: this.radio.versao,
                 servidorAgora: Date.now()
             },
+            portas: [...this.portas.values()].map(porta => ({
+                nome: porta.nome,
+                x: porta.x,
+                y: porta.y,
+                z: porta.z,
+                pivoX: porta.pivoX,
+                pivoZ: porta.pivoZ,
+                sentido: porta.sentido,
+                aberta: porta.aberta
+            })),
         };
     }
 }
