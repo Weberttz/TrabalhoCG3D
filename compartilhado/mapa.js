@@ -26,15 +26,15 @@ export const MAPA = Object.freeze([
                 interativo: false,
             },
             {
-                nome: 'computador01',
-                modelo: 'computador2.obj',
+                nome: 'radio01',
+                modelo: 'radio.obj',
                 x: 27.8,
-                y: 1.3,
+                y: 0.9,
                 z: 9.5,
                 cor: [1, 1, 1],
                 rotacaoY: 0,
                 solido: true,
-                interativo: false,
+                interativo: true,
             },
             {
                 nome: 'cadeiraEscritorio01',
@@ -58,28 +58,21 @@ export const MAPA = Object.freeze([
                 solido: false,
                 interativo: false,
             },
+
             {
-                nome: 'mesaEscritorio01',
-                modelo: 'office-desk.obj',
-                x: 29.4,
-                y: 0,
-                z: 9.5,
-                cor: [1, 1, 1],         
-                rotacaoY: 0,
-                solido: true,
-                interativo: false,
-            },
-            {
-                nome: 'radio01',
-                modelo: 'radio.obj',
+                nome: 'blocoTeste01',
+                ehBloco: true,
+                tamanho: 0.4,
+                cor: [0.9, 0.2, 0.2],
+
                 x: 29.0,
-                y: 0.9,
-                z: 9.7,
-                cor: [0.5, 0.5, 0.5],
-                rotacaoY: 0,
-                solido: true,
-                interativo: true,
-            },
+                y: 0.2,
+                z: 9.0,
+
+                solido: false,
+                item: true,
+                podePegar: true
+            }
         ]
     },
 ]);
@@ -155,7 +148,9 @@ export function obterObjetoInterativoProximo(
     let menorDistancia = Infinity;
 
     for (const objeto of objetos) {
-        if (!objeto.interativo) continue;
+        if (objeto.visivel === false) continue;
+        if (objeto.item && objeto.podePegar === false) continue;
+        if (!objeto.interativo && !objeto.item) continue;
 
         // Vetor do jogador até o objeto.
         const dx = objeto.x - jogador.x;

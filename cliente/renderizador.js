@@ -517,7 +517,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
       matrizesOssosPorJogador.delete(String(id));
     },
 
-    desenhar(jogadores, meuId, orientacao) {
+    desenhar(jogadores, meuId, orientacao, itens = []) {
       const escalaTela = Math.min(window.devicePixelRatio || 1, 2);
       const largura = Math.floor(canvas.clientWidth * escalaTela);
       const altura = Math.floor(canvas.clientHeight * escalaTela);
@@ -562,6 +562,11 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
       const camera = multiplicar(projecao, olharPara(olho, alvo));
 
       for (const objeto of objetos) {
+        if (objeto.item) continue;
+
+        const partes = malhasOBJ[objeto.modelo];
+        if (!partes) continue;
+
         const matrizTranslacao = translacao(objeto.x, objeto.y, objeto.z);
 
         const matrizRotacao = rotacaoY(objeto.rotacaoY ?? 0);
@@ -573,8 +578,6 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
         const textura = texturasOBJ[objeto.modelo] ?? null;
 
         const cor = textura ? [1.0, 1.0, 1.0] : (objeto.cor ?? [0.7, 0.7, 0.7]);
-
-        const partes = malhasOBJ[objeto.modelo];
 
         for (const parte of partes) {
           const material = parte.material;
@@ -642,6 +645,43 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             cor,
             null
           );
+        }
+      }
+
+      for (const item of itens) {
+        if (!item.visivel) continue;
+
+        if (item.ehBloco) {
+          const escala = (item.tamanho ?? 0.8) / 0.8;
+          const matrizModelo = multiplicar(
+            translacao(item.x, item.y, item.z),
+            escalaUniforme(escala)
+          );
+          const matrizFinal = multiplicar(camera, matrizModelo);
+
+          desenharMalha(
+            cubo,
+            matrizFinal,
+            matrizModelo,
+            item.cor ?? [0.9, 0.2, 0.2],
+            null
+          );
+        } else if (item.modelo && malhasOBJ[item.modelo]) {
+          const matrizModelo = translacao(item.x, item.y, item.z);
+          const matrizFinal = multiplicar(camera, matrizModelo);
+          const textura = texturasOBJ[item.modelo] ?? null;
+
+          for (const parte of malhasOBJ[item.modelo]) {
+            const material = parte.material;
+            desenharMalha(
+              parte.malha,
+              matrizFinal,
+              matrizModelo,
+              material?.diffuse || (textura ? [1, 1, 1] : (item.cor ?? [0.7, 0.7, 0.7])),
+              material?.diffuseMap || textura,
+              material
+            );
+          }
         }
       }
     },

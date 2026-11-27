@@ -84,17 +84,31 @@ export class Jogo {
 
             const sala = this.andar.salas[descricao.sala];
 
-            const objeto = descricao.interativo
-                ? sala.criarObjetoInterativo(
+            let objeto;
+            if (descricao.item) {
+                objeto = sala.criarItem(
                     descricao.nome,
-                    descricao.modelo,
-                    descricao.solido
-                )
-                : sala.criarObjeto(
+                    descricao.modelo ?? null,
+                    descricao.solido ?? false,
+                    descricao.podePegar ?? true
+                );
+            } else if (descricao.interativo) {
+                objeto = sala.criarObjetoInterativo(
                     descricao.nome,
                     descricao.modelo,
                     descricao.solido
                 );
+            } else {
+                objeto = sala.criarObjeto(
+                    descricao.nome,
+                    descricao.modelo,
+                    descricao.solido
+                );
+            }
+
+            objeto.ehBloco = Boolean(descricao.ehBloco);
+            objeto.cor = descricao.cor ?? [1, 1, 1];
+            objeto.tamanho = descricao.tamanho ?? 0.8;
 
             objeto.posicao = {
                 x: descricao.x,
@@ -104,7 +118,7 @@ export class Jogo {
 
             objeto.rotacaoY = descricao.rotacaoY ?? 0;
 
-            if (!objeto.temColisao) continue;
+            if (!objeto.temColisao || objeto.ehBloco || !descricao.modelo) continue;
 
             // Reutiliza a geometria se já estiver carregada.
             if (!this.modelosColisao.has(descricao.modelo)) {
@@ -175,6 +189,15 @@ export class Jogo {
                 );
             }
         );
+
+        this.configurarEventosItem('Sala001', 'blocoTeste01', {
+            aoPegar: (item, jogador) => {
+                console.log(`[Item] Jogador ${jogador.id} pegou "${item.nome}"`);
+            },
+            aoSoltar: (item, jogador) => {
+                console.log(`[Item] "${item.nome}" foi solto em (${item.posicao.x}, ${item.posicao.z})`);
+            }
+        });
 
         this.inicializado = true;
     }
@@ -391,6 +414,8 @@ export class Jogo {
         for (const sala of Object.values(andar.salas)) {
             for (const objeto of Object.values(sala.objetos)) {
                 if (typeof objeto.interagir !== 'function') continue;
+                if (objeto.visivel === false) continue;
+                if ('podePegar' in objeto && !objeto.podePegar) continue;
 
                 let alvoX = objeto.posicao.x;
                 let alvoZ = objeto.posicao.z;
@@ -426,6 +451,34 @@ export class Jogo {
 
         objeto.acao = funcaoDeInteracao;
         return true;
+    }
+
+    configurarEventosItem(nomeSala, nomeItem, eventos) {
+        const item = this.obterItem(nomeSala, nomeItem);
+        if (!item) return false;
+
+        item.configurarEventos(eventos);
+        return true;
+    }
+
+    obterItem(nomeSala, nomeItem) {
+        const objeto = this.andar.salas[nomeSala]?.objetos[nomeItem];
+        return objeto && 'podePegar' in objeto ? objeto : null;
+    }
+
+    soltarItemJogador(jogadorId, posicao, podePegar = true) {
+        const jogador = this.jogadores.get(jogadorId);
+        if (!jogador || !jogador.itemSegurado) return false;
+
+        for (const sala of Object.values(this.andar.salas)) {
+            const item = sala.objetos[jogador.itemSegurado];
+            if (item && typeof item.soltar === 'function') {
+                item.soltar(posicao ?? { x: jogador.x, y: 0.2, z: jogador.z }, podePegar, jogador);
+                jogador.itemSegurado = null;
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -726,6 +779,25 @@ export class Jogo {
             tasks: [
                 ...this.tasks.values()
             ].map(task => task.serializar()),
+
+            itens: Object.values(this.andar.salas).flatMap(sala =>
+                Object.values(sala.objetos)
+                    .filter(obj => 'podePegar' in obj)
+                    .map(item => ({
+                        nome: item.nome,
+                        sala: sala.nome,
+                        ehBloco: item.ehBloco,
+                        modelo: item.mesh,
+                        cor: item.cor,
+                        tamanho: item.tamanho,
+                        x: item.posicao.x,
+                        y: item.posicao.y,
+                        z: item.posicao.z,
+                        visivel: item.visivel,
+                        podePegar: item.podePegar,
+                        seguradoPor: item.seguradoPor
+                    }))
+            ),
 
             radio: {
                 ligado: this.radio.ligado,

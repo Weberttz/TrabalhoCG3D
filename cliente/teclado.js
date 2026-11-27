@@ -8,11 +8,23 @@ export function configurarInteracao(callback) {
   aoPressionarInteragir = callback;
 }
 
+let aoPressionarDrop = null;
+
+export function configurarDrop(callback) {
+  aoPressionarDrop = callback;
+}
 for (const [nomeEvento, pressionada] of [['keydown', true], ['keyup', false]]) {
   window.addEventListener(nomeEvento, evento => {
     if (evento.code === 'KeyE') {
       if (pressionada && !evento.repeat && aoPressionarInteragir) {
         aoPressionarInteragir();
+      }
+      evento.preventDefault();
+      return;
+    }
+    if (evento.code === 'KeyG') {
+      if (pressionada && !evento.repeat && aoPressionarDrop) {
+        aoPressionarDrop();
       }
       evento.preventDefault();
       return;

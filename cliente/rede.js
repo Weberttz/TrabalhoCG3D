@@ -63,3 +63,8 @@ export function enviarTrocaRadio() {
         tipo: 'radio_proxima'
     }));
 }
+
+export function enviarDrop() {
+  if (conexao.readyState !== WebSocket.OPEN || meuId === null) return;
+  conexao.send(JSON.stringify({ tipo: 'dropar' }));
+}
