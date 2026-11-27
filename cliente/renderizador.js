@@ -354,6 +354,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
 
   for (const [nome, modelo] of Object.entries(modelos)) {
     malhasOBJ[nome] = modelo.malhas.map((malha) => ({
+      nomeObjeto: malha.nomeObjeto,
       malha: new Mesh(gl, malha.posicoes, malha.texturas, malha.normais),
       material: modelo.materiais?.[malha.material] || null,
     }));
@@ -507,6 +508,8 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     : null;
 
   const matrizesOssosPorJogador = new Map();
+  const angulosPortas = new Map();
+  let ultimoQuadroPortas = performance.now();
 
   return {
     definirMatrizesOssos(id, matrizes) {
@@ -517,10 +520,23 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
       matrizesOssosPorJogador.delete(String(id));
     },
 
-    desenhar(jogadores, meuId, orientacao, itens = []) {
+    desenhar(jogadores, meuId, orientacao, itens = [], portas = []) {
       const escalaTela = Math.min(window.devicePixelRatio || 1, 2);
       const largura = Math.floor(canvas.clientWidth * escalaTela);
       const altura = Math.floor(canvas.clientHeight * escalaTela);
+
+      const agoraPortas = performance.now();
+
+      const deltaPortas = Math.min(
+        (agoraPortas - ultimoQuadroPortas) / 1000,
+        0.05
+      );
+
+      ultimoQuadroPortas = agoraPortas;
+
+      const portasPorNome = new Map(
+        portas.map(porta => [porta.nome, porta])
+      );
 
       if (canvas.width !== largura || canvas.height !== altura) {
         canvas.width = Math.max(1, largura);
@@ -585,15 +601,64 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
           const texturaMaterial = material?.diffuseMap || textura;
           const corMaterial = material?.diffuse || cor;
 
+          let matrizModeloParte = matrizModelo;
+
+          // Portas são partes individuais do nc2a.obj.
+          const porta = objeto.modelo === 'nc2a.obj'
+            ? portasPorNome.get(parte.nomeObjeto)
+            : null;
+
+          if (porta) {
+            const anguloAtual =
+              angulosPortas.get(porta.nome) ?? 0;
+
+            const anguloAlvo = porta.aberta
+              ? porta.sentido * Math.PI / 2
+              : 0;
+
+            // Animação gradual, aproximadamente 0,5 segundo.
+            const diferenca = anguloAlvo - anguloAtual;
+            const passoMaximo = Math.PI * deltaPortas;
+
+            const novoAngulo = anguloAtual +
+              Math.sign(diferenca) *
+              Math.min(Math.abs(diferenca), passoMaximo);
+
+            angulosPortas.set(porta.nome, novoAngulo);
+
+            // Translada até a dobradiça, gira e retorna.
+            const matrizPorta = multiplicar(
+              translacao(porta.pivoX, 0, porta.pivoZ),
+              multiplicar(
+                rotacaoY(novoAngulo),
+                translacao(-porta.pivoX, 0, -porta.pivoZ)
+              )
+            );
+
+            matrizModeloParte = multiplicar(
+              matrizModelo,
+              matrizPorta
+            );
+          }
+
+          // Cada porta recebe sua própria matriz.
+          const matrizFinalParte = multiplicar(
+            camera,
+            matrizModeloParte
+          );
+
           desenharMalha(
             parte.malha,
-            matrizFinal,
-            matrizModelo,
+            matrizFinalParte,
+            matrizModeloParte,
             corMaterial,
             texturaMaterial,
             material,
-            objeto.modelo === "radio.obj" || objeto.modelo === "computador2.obj" ||
-            objeto.modelo === "nc2a.obj" ? UV_RADIO : null
+            objeto.modelo === 'radio.obj' ||
+              objeto.modelo === 'computador2.obj' ||
+              objeto.modelo === 'nc2a.obj'
+              ? UV_RADIO
+              : null
           );
         }
       }
