@@ -22,7 +22,7 @@ export function criarHUD() {
                 <div class="nc2a-logo" aria-hidden="true">N</div>
                 <div class="nc2a-identidade-textos">
                     <span class="nc2a-subtitulo">Núcleo de Computação</span>
-                    <strong class="nc2a-nome">NC2A Simulator</strong>
+                    <strong class="nc2a-nome">NC2A</strong>
                 </div>
             </div>
 
