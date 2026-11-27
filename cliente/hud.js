@@ -224,9 +224,14 @@ export function criarHUD() {
         );
 
         const ehRadio = nome === 'radio01';
+        const ehPorta = nome.includes('__Int__Porta');
 
         nomeInteracao.textContent = ehRadio
             ? 'Rádio'
+            : recolherSubString(nome).replace(/[-_]+/g, ' ');
+
+        nomeInteracao.textContent = ehPorta
+            ? 'porta'
             : recolherSubString(nome).replace(/[-_]+/g, ' ');
 
         elementoInteracao.hidden = false;

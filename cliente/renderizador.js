@@ -654,9 +654,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             corMaterial,
             texturaMaterial,
             material,
-            objeto.modelo === 'radio.obj' ||
-              objeto.modelo === 'computador2.obj' ||
-              objeto.modelo === 'nc2a.obj'
+            objeto.modelo === 'radio.obj' || objeto.modelo === 'computador2.obj'
               ? UV_RADIO
               : null
           );
