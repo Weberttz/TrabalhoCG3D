@@ -1,6 +1,6 @@
 import { obterObjetosMapa, obterObjetoInterativoProximo } from "./mapa.js";
 import { lerTeclas, configurarInteracao, configurarDrop } from "./teclado.js";
-import { enviarTeclas, enviarInteracao, obterSessao, enviarTrocaRadio, enviarDrop } from "./rede.js";
+import { enviarTeclas, enviarInteracao, obterSessao, enviarTrocaRadio, enviarDrop, enviarInteracaoPorta } from "./rede.js";
 import { criarRenderizador } from './renderizador.js';
 import { iniciarMouse, obterOrientacao } from './mouse.js';
 import { leitorOBJ } from './leitorOBJ.js';
@@ -22,7 +22,7 @@ async function carregarModelos() {
     "personagem.obj",
     "office-desk.obj",
     "office-chair.obj",
-    "ceiling-lamp.obj", 
+    "ceiling-lamp.obj",
     "computador2.obj",
     "nc2a.obj"
   ];
@@ -125,6 +125,10 @@ async function iniciarJogo() {
   configurarInteracao(() => {
     radio.habilitarAudio();
 
+    if (objetoInterativoAtual?.porta === true) {
+      enviarInteracaoPorta(objetoInterativoAtual.nome);
+      return;
+    }
     // O servidor decide qual objeto foi acionado.
     enviarInteracao();
 
@@ -260,10 +264,25 @@ async function iniciarJogo() {
         interativo: item.visivel && item.podePegar,
       }));
 
+      const portasInterativas = (estado?.portas ?? [])
+        .filter(porta => {
+          const alturaOlhos = (meuJogador?.y ?? 0) + 1.25;
+          return Math.abs(alturaOlhos - porta.y) <= 1.75;
+        })
+        .map(porta => ({
+          ...porta,
+          porta: true,
+          interativo: true
+        }));
+
       const objetoProximo = meuJogador
         ? obterObjetoInterativoProximo(
           meuJogador,
-          [...objetosInterativos, ...itensServidor],
+          [
+            ...objetosInterativos,
+            ...itensServidor,
+            ...portasInterativas
+          ],
           direcaoOlhar,
           2,
           35
@@ -349,7 +368,8 @@ async function iniciarJogo() {
         jogadores,
         meuId,
         obterOrientacao(),
-        estado?.itens ?? []
+        estado?.itens ?? [],
+        estado?.portas ?? []
       );
 
     } catch (erro) {

@@ -68,3 +68,17 @@ export function enviarDrop() {
   if (conexao.readyState !== WebSocket.OPEN || meuId === null) return;
   conexao.send(JSON.stringify({ tipo: 'dropar' }));
 }
+
+export function enviarInteracaoPorta(nome) {
+    if (
+        conexao.readyState !== WebSocket.OPEN ||
+        meuId === null
+    ) {
+        return;
+    }
+
+    conexao.send(JSON.stringify({
+        tipo: 'porta_interagir',
+        nome
+    }));
+}
