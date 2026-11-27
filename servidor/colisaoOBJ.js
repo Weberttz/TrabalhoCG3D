@@ -110,32 +110,49 @@ export async function carregarColisoesOBJ(caminho) {
         colisores.push(limites);
     }
 
-    function detectarColisao(x, y, z) {
+    function detectarColisao(x, y, z, portas = null) {
         for (const caixa of colisores) {
-
-            // y representa a posição dos pés do jogador.
             const sobrepoeAltura =
                 y < caixa.maximoY - MARGEM &&
                 y + ALTURA_JOGADOR > caixa.minimoY + MARGEM;
 
             if (!sobrepoeAltura) continue;
 
-            // Ponto da caixa mais próximo do centro do jogador.
+            let pontoX = x;
+            let pontoZ = z;
+
+            const porta = portas?.get(caixa.nome);
+
+            if (porta?.aberta) {
+                const angulo = porta.sentido * Math.PI / 2;
+
+                const c = Math.cos(angulo);
+                const s = Math.sin(angulo);
+
+                const dx = x - porta.pivoX;
+                const dz = z - porta.pivoZ;
+
+                // Rotação inversa do jogador em relação à porta.
+                pontoX = porta.pivoX + c * dx - s * dz;
+                pontoZ = porta.pivoZ + s * dx + c * dz;
+            }
+
             const proximoX = Math.max(
                 caixa.minimoX,
-                Math.min(x, caixa.maximoX)
+                Math.min(pontoX, caixa.maximoX)
             );
 
             const proximoZ = Math.max(
                 caixa.minimoZ,
-                Math.min(z, caixa.maximoZ)
+                Math.min(pontoZ, caixa.maximoZ)
             );
 
-            const dx = x - proximoX;
-            const dz = z - proximoZ;
+            const distanciaX = pontoX - proximoX;
+            const distanciaZ = pontoZ - proximoZ;
 
             if (
-                dx * dx + dz * dz <
+                distanciaX * distanciaX +
+                distanciaZ * distanciaZ <
                 RAIO_JOGADOR * RAIO_JOGADOR
             ) {
                 return caixa;
@@ -152,8 +169,8 @@ export async function carregarColisoesOBJ(caminho) {
 
         detectarColisao,
 
-        posicaoBloqueada(x, y, z) {
-            return detectarColisao(x, y, z) !== null;
+        posicaoBloqueada(x, y, z, portas = null) {
+            return detectarColisao(x, y, z, portas) !== null;
         }
     };
 }
