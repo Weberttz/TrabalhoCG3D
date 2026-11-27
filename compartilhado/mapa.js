@@ -58,6 +58,21 @@ export const MAPA = Object.freeze([
                 rotacaoY: 0,
                 solido: false,
                 interativo: false,
+            },
+
+            {
+                nome: 'blocoTeste01',
+                ehBloco: true,
+                tamanho: 0.4,
+                cor: [0.9, 0.2, 0.2],
+
+                x: 29.0,
+                y: 0.2,
+                z: 9.0,
+
+                solido: false,
+                item: true,
+                podePegar: true
             }
         ]
     },
@@ -208,7 +223,9 @@ export function obterObjetoInterativoProximo(
     let menorDistancia = Infinity;
 
     for (const objeto of objetos) {
-        if (!objeto.interativo) continue;
+        if (objeto.visivel === false) continue;
+        if (objeto.item && objeto.podePegar === false) continue;
+        if (!objeto.interativo && !objeto.item) continue;
 
         // Vetor do jogador até o objeto.
         const dx = objeto.x - jogador.x;

@@ -67,6 +67,20 @@ export class Sala {
 
         return this.objetos[nomeObjeto];
     }
+
+    criarItem(nomeObjeto, mesh, temColisao = false, podePegar = true, funcaoDeInteracao = null) {
+        if (!this.objetos[nomeObjeto]) {
+            this.objetos[nomeObjeto] = new Item(
+                nomeObjeto,
+                mesh,
+                temColisao,
+                podePegar,
+                funcaoDeInteracao
+            );
+        }
+
+        return this.objetos[nomeObjeto];
+    }
 }
 
 export class Objeto {
@@ -98,5 +112,65 @@ export class ObjetoInterativo extends Objeto{
         if(typeof this.acao == 'function'){
             this.acao(this,jogador);
         }
+    }
+}
+
+
+export class Item extends ObjetoInterativo {
+    constructor(nome, mesh, temColisao = false, podePegar = true, funcaoDeInteracao = null) {
+        super(nome, mesh, temColisao, funcaoDeInteracao);
+        this.podePegar = podePegar;
+        this.seguradoPor = null;
+        this.visivel = true;
+        this.interativo = true;
+
+        this.aoPegar = null;
+        this.aoSoltar = null;
+
+        if (!this.acao) {
+            this.acao = (item, jogador) => item.pegar(jogador);
+        }
+    }
+
+    configurarEventos({ aoPegar = null, aoSoltar = null } = {}) {
+        if (typeof aoPegar === 'function') this.aoPegar = aoPegar;
+        if (typeof aoSoltar === 'function') this.aoSoltar = aoSoltar;
+    }
+
+    pegar(jogador) {
+        if (!this.podePegar || !this.visivel || this.seguradoPor !== null) {
+            return false;
+        }
+
+        this.seguradoPor = jogador.id;
+        this.visivel = false;
+        this.temColisao = false;
+        jogador.itemSegurado = this.nome;
+
+        if (typeof this.aoPegar === 'function') {
+            this.aoPegar(this, jogador);
+        }
+
+        return true;
+    }
+
+    soltar(posicao, podePegar = true, jogador = null) {
+        if (posicao) {
+            this.posicao = {
+                x: posicao.x,
+                y: posicao.y ?? 0,
+                z: posicao.z
+            };
+        }
+
+        this.seguradoPor = null;
+        this.visivel = true;
+        this.podePegar = podePegar;
+
+        if (typeof this.aoSoltar === 'function') {
+            this.aoSoltar(this, jogador);
+        }
+
+        return true;
     }
 }

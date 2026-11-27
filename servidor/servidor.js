@@ -199,6 +199,10 @@ servidorWebSocket.on('connection', conexao => {
         if (jogo.proximaMusicaRadio(jogador.id)) {
           transmitirEstado();
         }
+      } else if (mensagem?.tipo === 'dropar') {
+        if (jogo.soltarItemJogador(jogador.id)) {
+          transmitirEstado();
+        }
       }
     } catch {
       // Um pacote inválido não deve derrubar o servidor.

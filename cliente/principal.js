@@ -1,6 +1,6 @@
 import { obterObjetosMapa, obterObjetoInterativoProximo } from "./mapa.js";
-import { lerTeclas, configurarInteracao } from "./teclado.js";
-import { enviarTeclas, enviarInteracao, obterSessao, enviarTrocaRadio } from "./rede.js";
+import { lerTeclas, configurarInteracao, configurarDrop } from "./teclado.js";
+import { enviarTeclas, enviarInteracao, obterSessao, enviarTrocaRadio, enviarDrop } from "./rede.js";
 import { criarRenderizador } from './renderizador.js';
 import { iniciarMouse, obterOrientacao } from './mouse.js';
 import { leitorOBJ } from './leitorOBJ.js';
@@ -126,6 +126,10 @@ async function iniciarJogo() {
 
     // O servidor decide qual objeto foi acionado.
     enviarInteracao();
+
+    configurarDrop(() => {
+      enviarDrop();
+    });
   });
 
   // T solicita a próxima música ao servidor.
@@ -238,6 +242,7 @@ async function iniciarJogo() {
       hud.atualizarMissoes(minhasMissoes);
 
       // Interação com os objetos
+      // Interação com os objetos
       const direcaoOlhar = {
         x: Math.sin(anguloHorizontal),
         z: -Math.cos(anguloHorizontal)
@@ -248,10 +253,16 @@ async function iniciarJogo() {
           String(jogador.id) === String(meuId)
       );
 
+      const itensServidor = (estado?.itens ?? []).map(item => ({
+        ...item,
+        item: true,
+        interativo: item.visivel && item.podePegar,
+      }));
+
       const objetoProximo = meuJogador
         ? obterObjetoInterativoProximo(
           meuJogador,
-          objetosInterativos,
+          [...objetosInterativos, ...itensServidor],
           direcaoOlhar,
           2,
           35
@@ -336,7 +347,8 @@ async function iniciarJogo() {
       renderizador.desenhar(
         jogadores,
         meuId,
-        obterOrientacao()
+        obterOrientacao(),
+        estado?.itens ?? []
       );
 
     } catch (erro) {
