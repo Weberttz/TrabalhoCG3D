@@ -52,7 +52,7 @@ export function criarHUD() {
             <kbd class="nc2a-interacao-tecla">E</kbd>
 
             <div class="nc2a-interacao-conteudo">
-                <strong>Ligar/Desligar</strong>
+                <strong>Interagir</strong>
                 <span id="hud-interacao-nome">Objeto</span>
             </div>
 
