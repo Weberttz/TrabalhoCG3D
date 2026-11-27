@@ -3,8 +3,8 @@ const DESLOCAMENTO = 3
 
 export const MAPA = Object.freeze([
     {
-        nome: 'Sala001',
-        modelo: 'sala001.obj',
+        nome: 'nc2a',
+        modelo: 'nc2a.obj',
 
         x: 0,
         y: 0,
@@ -20,7 +20,7 @@ export const MAPA = Object.freeze([
                 x: 27.4,
                 y: 0,
                 z: 9.5,
-                cor: [1, 1, 1],
+                cor: [1, 1, 1],         
                 rotacaoY: 0,
                 solido: true,
                 interativo: false,
@@ -47,7 +47,6 @@ export const MAPA = Object.freeze([
                 solido: true,
                 interativo: false,
             },
-
             {
                 nome: 'lampada01',
                 modelo: 'ceiling-lamp.obj',
@@ -58,83 +57,31 @@ export const MAPA = Object.freeze([
                 rotacaoY: 0,
                 solido: false,
                 interativo: false,
-            }
-        ]
-    },
-
-    {
-        nome: 'Sala002',
-        modelo: 'sala001.obj',
-
-        // Encostada à direita da Sala001.
-        x: LARGURA_SALA + DESLOCAMENTO,
-        y: 0,
-        z: 0,
-
-        cor: [0.7, 0.7, 0.7],
-        solido: true,
-
-        objetos: [
+            },
             {
-                nome: 'mesaEscritorio02',
+                nome: 'mesaEscritorio01',
                 modelo: 'office-desk.obj',
-                x: 28.0,
+                x: 29.4,
                 y: 0,
-                z: 9.7,
-                cor: [1, 1, 1],
+                z: 9.5,
+                cor: [1, 1, 1],         
                 rotacaoY: 0,
                 solido: true,
                 interativo: false,
             },
-
             {
                 nome: 'radio01',
                 modelo: 'radio.obj',
-                x: 28.0,
-                y: 1,
+                x: 29.0,
+                y: 0.9,
                 z: 9.7,
                 cor: [0.5, 0.5, 0.5],
                 rotacaoY: 0,
                 solido: true,
                 interativo: true,
             },
-            {
-                nome: 'lixeira01',
-                modelo: 'lixeira.obj',
-                x: 31.7,
-                y: 0,
-                z: 10.8,
-                cor: [0.3, 0.3, 0.3],
-                rotacaoY: 0,
-                solido: true,
-                interativo: true,
-            },
-
-            {
-                nome: 'cadeiraEscritorio02',
-                modelo: 'office-chair.obj',
-                x: 28,
-                y: 0,
-                z: 10.5,
-                cor: [1, 1, 1],
-                rotacaoY: Math.PI,
-                solido: true,
-                interativo: false,
-            },
-
-            {
-                nome: 'lampada02',
-                modelo: 'ceiling-lamp.obj',
-                x: 30,
-                y: 3,
-                z: 9,
-                cor: [1, 1, 1],
-                rotacaoY: 0,
-                solido: false,
-                interativo: false,
-            },
         ]
-    }
+    },
 ]);
 
 export function obterObjetosMapa() {

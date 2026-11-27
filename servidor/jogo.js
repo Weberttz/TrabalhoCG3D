@@ -10,6 +10,7 @@ const MUSICAS_RADIO = [
     '/audios/Reflections.mp3',
     '/audios/DoIWannaKnow.mp3',
     '/audios/DarkRed.mp3',
+    '/audios/ForroDaPisadinha.mp3'
 ];
 
 const DIRETORIO_ATUAL = path.dirname(
@@ -156,7 +157,7 @@ export class Jogo {
         });
 
         this.definirFuncaoInteracao(
-            'Sala002',
+            'nc2a',
             'radio01',
             () => {
                 this.radio.ligado = !this.radio.ligado;
@@ -209,7 +210,7 @@ export class Jogo {
 
         const posicao = posicoesIniciais.find(posicao =>
             this.podeOcupar(
-                { id: -1, y: posicao.y, andar: 'Andar00', sala: 'Sala001' },
+                { id: -1, y: posicao.y, andar: 'Andar00', sala: 'nc2a' },
                 posicao.x,
                 posicao.z
             )
@@ -242,7 +243,7 @@ export class Jogo {
 
             // Localização na estrutura do prédio.
             andar: 'Andar00',
-            sala: 'Sala001'
+            sala: 'nc2a'
         };
 
         this.jogadores.set(jogador.id, jogador);
@@ -431,7 +432,7 @@ export class Jogo {
     podeControlarRadio(jogadorId) {
         const jogador = this.jogadores.get(jogadorId);
 
-        const radio = this.andar.salas['Sala002']
+        const radio = this.andar.salas['nc2a']
             ?.objetos['radio01'];
 
         if (!jogador || !radio) {
