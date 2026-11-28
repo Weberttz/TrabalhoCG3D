@@ -817,9 +817,15 @@ export class Jogo {
                 z: objetoZ
             } = objeto.posicao;
 
-            const xLocal = x - objetoX;
+            // Inverte a rotação da instância antes de testar o AABB do OBJ.
+            const angulo = objeto.rotacaoY ?? 0;
+            const seno = Math.sin(angulo);
+            const cosseno = Math.cos(angulo);
+            const dxLocal = x - objetoX;
+            const dzLocal = z - objetoZ;
+            const xLocal = cosseno * dxLocal - seno * dzLocal;
             const yLocal = jogador.y - objetoY;
-            const zLocal = z - objetoZ;
+            const zLocal = seno * dxLocal + cosseno * dzLocal;
 
             const bloqueado =
                 objeto.colisaoOBJ.posicaoBloqueada(
@@ -829,7 +835,7 @@ export class Jogo {
 
                     // As portas continuam usando seus
                     // colisores dinâmicos.
-                    objeto.mesh === 'nc2a.obj'
+                    objeto.mesh === 'nc2a.obj' || objeto.nome === 'nc2a_estrutura'
                         ? this.portas
                         : null
                 );
