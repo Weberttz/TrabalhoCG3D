@@ -583,12 +583,17 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
         const partes = malhasOBJ[objeto.modelo];
         if (!partes) continue;
 
+        const matrizEscala = escalaUniforme(objeto.escala ?? 1);
+
         const matrizTranslacao = translacao(objeto.x, objeto.y, objeto.z);
-
+        
         const matrizRotacao = rotacaoY(objeto.rotacaoY ?? 0);
-
-        const matrizModelo = multiplicar(matrizTranslacao, matrizRotacao);
-
+        
+        const matrizModelo = multiplicar(
+          matrizTranslacao,
+          multiplicar(matrizRotacao, matrizEscala)
+        );
+        
         const matrizFinal = multiplicar(camera, matrizModelo);
 
         const textura = texturasOBJ[objeto.modelo] ?? null;
@@ -730,7 +735,10 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             null
           );
         } else if (item.modelo && malhasOBJ[item.modelo]) {
-          const matrizModelo = translacao(item.x, item.y, item.z);
+          const matrizModelo = multiplicar(
+            translacao(item.x, item.y, item.z),
+            escalaUniforme(item.escala ?? 1)
+          );
           const matrizFinal = multiplicar(camera, matrizModelo);
           const textura = texturasOBJ[item.modelo] ?? null;
 

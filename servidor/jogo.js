@@ -110,6 +110,7 @@ export class Jogo {
             objeto.ehBloco = Boolean(descricao.ehBloco);
             objeto.cor = descricao.cor ?? [1, 1, 1];
             objeto.tamanho = descricao.tamanho ?? 0.8;
+            objeto.escala = descricao.escala ?? 1;
 
             objeto.posicao = {
                 x: descricao.x,
@@ -899,6 +900,7 @@ export class Jogo {
                 Object.values(sala.objetos)
                     .filter(obj => 'podePegar' in obj)
                     .map(item => ({
+                        escala: item.escala,
                         nome: item.nome,
                         sala: sala.nome,
                         ehBloco: item.ehBloco,
