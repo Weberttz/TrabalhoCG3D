@@ -1,0 +1,17 @@
+newmtl metal_escuro
+Ka 0.22 0.27 0.29
+Kd 0.2 0.25 0.27
+Ks 0.35 0.35 0.35
+Ns 40
+
+newmtl plastico_cinza
+Ka 0.34 0.38 0.4
+Kd 0.33 0.37 0.39
+Ks 0.24 0.24 0.24
+Ns 20
+
+newmtl prata
+Ka 0.48 0.52 0.54
+Kd 0.46 0.5 0.52
+Ks 0.44 0.44 0.44
+Ns 52

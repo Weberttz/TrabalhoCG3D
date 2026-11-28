@@ -2,6 +2,7 @@
 # www.blender.org
 
 newmtl ceiling-lamp_body_pbr
+Ka 0.62 0.62 0.62
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.500000
@@ -18,9 +19,10 @@ map_Pr ceiling-lamp_body_metallic-ceiling-lamp_body_roughness_roughness.jpg
 map_Bump -bm 1.000000 ceiling-lamp_body_normal.jpg
 
 newmtl ceiling-lamp_diffuser_glow_x
+Ka 0.85 0.76 0.59
 Kd 0.964686 0.938686 0.896269
 Ks 0.500000 0.500000 0.500000
-Ke 1.290215 0.902272 0.235577
+Ke 0.72 0.52 0.28
 Ni 1.500000
 d 1.000000
 illum 2

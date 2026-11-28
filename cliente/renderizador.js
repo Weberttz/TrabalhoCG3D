@@ -1,14 +1,13 @@
-import { obterObjetosMapa } from "./mapa.js";
+import { ILUMINACAO_NC2A, obterObjetosMapa } from "./mapa.js";
+import { criarIluminacao, GLSL_ILUMINACAO } from "./iluminacao.js";
 import { criarDesenhadorGLB } from "./renderizadorGLB.js";
 import { Mesh } from "./mesh.js";
 
 const caminhosTexturas = {
   "office-desk.obj": "/texturas/office-desk_body_basecolor.jpg",
   "office-chair.obj": "/texturas/office-chair_body_basecolor.jpg",
-  "ceiling-lamp.obj": "/texturas/ceiling-lamp_body_basecolor.jpg",
   "radio.obj": "/texturas/radio_textura.jpg",
   "lousa.obj": "/texturas/lousa_textura.jpg",
-  "cadeira-aula.obj": "/texturas/Image_0.001.jpg",
 };
 
 const ESCALA_V_RADIO = 15.9874773;
@@ -34,13 +33,9 @@ in vec3 aNormal;
 uniform mat4 uMatrizMVP;
 uniform mat4 uModelo;
 
-uniform vec3 uPosicaoLuz;
-uniform vec3 uPosicaoCamera;
-
 out vec2 vTextura;
 out vec3 vNormal;
-out vec3 vDirecaoLuz;
-out vec3 vDirecaoCamera;
+out vec3 vPosicaoMundo;
 
 void main() {
   vec4 posicaoMundo = uModelo * vec4(aPosicao, 1.0);
@@ -48,8 +43,7 @@ void main() {
   vNormal = mat3(uModelo) * aNormal;
   vTextura = aTextura * uEscalaUV + uDeslocamentoUV;
 
-  vDirecaoLuz = uPosicaoLuz - posicaoMundo.xyz;
-  vDirecaoCamera = uPosicaoCamera - posicaoMundo.xyz;
+  vPosicaoMundo = posicaoMundo.xyz;
 
   gl_Position = uMatrizMVP * vec4(aPosicao, 1.0);
 }
@@ -60,8 +54,7 @@ precision highp float;
 
 in vec2 vTextura;
 in vec3 vNormal;
-in vec3 vDirecaoLuz;
-in vec3 vDirecaoCamera;
+in vec3 vPosicaoMundo;
 
 uniform sampler2D uTextura;
 uniform sampler2D uMapaEspecular;
@@ -78,10 +71,11 @@ uniform vec3 uCorEmissiva;
 
 uniform float uBrilho;
 
-uniform vec3 uCorLuz;
-uniform vec3 uDirecaoLuz;
+uniform vec3 uPosicaoCamera;
 
 out vec4 corFinal;
+
+${GLSL_ILUMINACAO}
 
 void main() {
     vec3 corTextura = vec3(1.0);
@@ -91,50 +85,16 @@ void main() {
     }
 
     vec3 corDifusa = uCor * corTextura;
-    vec3 corAmbiente = uCorAmbiente;
+    vec3 corAmbiente = uCorAmbiente * corTextura;
     vec3 corEspecular = uCorEspecular;
 
     if (uUsarMapaEspecular) {
       corEspecular *= texture(uMapaEspecular, vTextura).rgb;
     }
 
-    vec3 pToLight = normalize(vDirecaoLuz);
-    vec3 pToCam = normalize(vDirecaoCamera);
-    vec3 halfVec = normalize(pToCam + pToLight);
+    vec3 resultado = aplicarLuzes(vPosicaoMundo, normalize(vNormal), corDifusa,
+        corAmbiente, corEspecular, uBrilho, normalize(uPosicaoCamera - vPosicaoMundo));
 
-    vec3 normal = normalize(vNormal);
-    vec3 lightDirection = normalize(-uDirecaoLuz);
-
-    float lightd = max(dot(normal, lightDirection), 0.0);
-    float lightp = max(dot(normal, pToLight), 0.0);
-    float lighte = max(dot(normal, halfVec), 0.0);
-
-    float distanciaLuz = length(vDirecaoLuz);
-
-    float a = 1.0;
-    float b = 0.01;
-    float c = 0.001;
-
-    float atenuacao = 1.0 / (
-      a + b * distanciaLuz + c * distanciaLuz * distanciaLuz
-    );
-
-    // Luz ambiente
-    vec3 resultado = 0.3 * uCorLuz * corAmbiente;
-
-    // Luz distante - difusa
-    resultado += 0.2 * uCorLuz * lightd * corDifusa;
-
-    // Luz pontual - difusa
-    resultado += 0.8 * uCorLuz * lightp * corDifusa * atenuacao;
-
-    // Luz especular
-    if (lightp > 0.0) {
-      resultado += 0.15 * uCorLuz
-        * corEspecular
-        * pow(lighte, max(uBrilho, 1.0))
-        * atenuacao;
-    }
     // Cor emissiva
     vec3 emissao = uCorEmissiva;
 
@@ -144,7 +104,7 @@ void main() {
 
     resultado += emissao;
 
-    corFinal = vec4(resultado, 1.0);
+    corFinal = vec4(limitarAltasLuzes(resultado), 1.0);
 }
 `;
 
@@ -254,16 +214,45 @@ function translacao(x, y, z) {
   ]);
 }
 
-function rotacaoY(angulo) {
-  const c = Math.cos(angulo);
-  const s = Math.sin(angulo);
+function rotacaoY(angulo, escala = 1) {
+  const c = Math.cos(angulo) * escala;
+  const s = Math.sin(angulo) * escala;
 
   return new Float32Array([
     c, 0, -s, 0,
-    0, 1, 0, 0,
+    0, escala, 0, 0,
     s, 0, c, 0,
     0, 0, 0, 1,
   ]);
+}
+
+function esferaModelo(posicoes) {
+  const minimo = [Infinity, Infinity, Infinity];
+  const maximo = [-Infinity, -Infinity, -Infinity];
+
+  for (let i = 0; i < posicoes.length; i += 3) {
+    for (let eixo = 0; eixo < 3; eixo++) {
+      const coordenada = posicoes[i + eixo];
+      minimo[eixo] = Math.min(minimo[eixo], coordenada);
+      maximo[eixo] = Math.max(maximo[eixo], coordenada);
+    }
+  }
+
+  return {
+    centro: minimo.map((valor, eixo) => (valor + maximo[eixo]) / 2),
+    raio: Math.hypot(...maximo.map((valor, eixo) => valor - minimo[eixo])) / 2
+  };
+}
+
+function planosCamera(matriz) {
+  return [0, 1, 2].flatMap(eixo => [-1, 1].map(sinal => {
+    const x = matriz[3] + sinal * matriz[eixo];
+    const y = matriz[7] + sinal * matriz[4 + eixo];
+    const z = matriz[11] + sinal * matriz[8 + eixo];
+    const d = matriz[15] + sinal * matriz[12 + eixo];
+    const comprimento = Math.hypot(x, y, z);
+    return [x / comprimento, y / comprimento, z / comprimento, d / comprimento];
+  }));
 }
 
 function verticesCubo() {
@@ -329,9 +318,6 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
   const uniformeModelo = gl.getUniformLocation(programa, "uModelo");
   const uniformeTextura = gl.getUniformLocation(programa, "uTextura");
   const uniformeUsarTextura = gl.getUniformLocation(programa, "uUsarTextura");
-  const uniformeCorLuz = gl.getUniformLocation(programa, "uCorLuz");
-  const uniformeDirecaoLuz = gl.getUniformLocation(programa, "uDirecaoLuz");
-  const uniformePosicaoLuz = gl.getUniformLocation(programa, "uPosicaoLuz");
   const uniformePosicaoCamera = gl.getUniformLocation(
     programa,
     "uPosicaoCamera"
@@ -361,20 +347,45 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
   // carrega as texturas associadas manualmente aos .objs
   const texturasOBJ = {};
 
-  for (const chave in caminhosTexturas) {
-    texturasOBJ[chave] = carregarTextura(gl, caminhosTexturas[chave]);
+  for (const [modelo, caminho] of Object.entries(caminhosTexturas)) {
+    if (malhasOBJ[modelo]) texturasOBJ[modelo] = carregarTextura(gl, caminho);
   }
 
-  // malha e cores do quarto são importadas, não ficam espalhadas aqui.
-  const objetos = obterObjetosMapa();
+  const esferas = new Map(
+    Object.entries(modelos)
+      .filter(([nome]) => nome !== 'nc2a.obj')
+      .map(([nome, modelo]) => [nome, esferaModelo(modelo.posicoes)])
+  );
+
+  const objetos = obterObjetosMapa()
+    .filter(objeto => !objeto.item && malhasOBJ[objeto.modelo])
+    .map(objeto => {
+      const matrizModelo = multiplicar(
+        translacao(objeto.x, objeto.y, objeto.z),
+        rotacaoY(objeto.rotacaoY ?? 0, objeto.escala ?? 1)
+      );
+
+      const esfera = esferas.get(objeto.modelo);
+      if (!esfera) return { ...objeto, matrizModelo };
+
+      const [x, y, z] = esfera.centro;
+      return {
+        ...objeto,
+        matrizModelo,
+        centro: [
+          matrizModelo[0] * x + matrizModelo[8] * z + objeto.x,
+          matrizModelo[5] * y + objeto.y,
+          matrizModelo[2] * x + matrizModelo[10] * z + objeto.z
+        ],
+        raio: esfera.raio * (objeto.escala ?? 1)
+      };
+    });
 
   gl.useProgram(programa);
   gl.enable(gl.DEPTH_TEST);
 
-  // configuracoes da iluminação
-  gl.uniform3fv(uniformePosicaoLuz, [30.0, 3.0, 8.0]); // posição da luz pontual
-  gl.uniform3fv(uniformeCorLuz, [1.0, 1.0, 1.0]); // cor da luz
-  gl.uniform3fv(uniformeDirecaoLuz, [0.0, -1.0, 0.0]); // direção da luz direcional
+  const iluminacao = criarIluminacao(gl, ILUMINACAO_NC2A);
+  iluminacao.configurarPrograma(programa);
 
   function desenharMalha(
     malha,
@@ -384,6 +395,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     textura,
     material = null,
     transformacaoUV = null,
+    corAmbiente = material?.ambient ?? cor,
   ) {
     gl.uniform2fv(
       uniformeEscalaUV,
@@ -399,7 +411,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     gl.uniformMatrix4fv(uniformeModelo, false, matrizModelo);
     gl.uniform3fv(uniformeCor, cor);
 
-    gl.uniform3fv(uniformeCorAmbiente, material?.ambient ?? cor);
+    gl.uniform3fv(uniformeCorAmbiente, corAmbiente);
     gl.uniform3fv(uniformeCorEspecular, material?.specular ?? [1, 1, 1]);
     gl.uniform3fv(uniformeCorEmissiva, material?.emissive ?? [0, 0, 0]);
     gl.uniform1f(uniformeBrilho, material?.shininess ?? 400);
@@ -536,7 +548,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
   }
 
   const desenhadorPersonagem = personagemGLB
-    ? criarDesenhadorGLB(gl, personagemGLB)
+    ? criarDesenhadorGLB(gl, personagemGLB, iluminacao)
     : null;
 
   const matrizesOssosPorJogador = new Map();
@@ -613,18 +625,19 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
 
       const camera = multiplicar(projecao, olharPara(olho, alvo));
 
+      const planos = planosCamera(camera);
+
       for (const objeto of objetos) {
-        if (objeto.item) continue;
+        // Evita enviar malhas de mobília fora do campo de visão à GPU.
+        if (objeto.centro) {
+          const [x, y, z] = objeto.centro;
+          if (planos.some(([a, b, c, d]) => a * x + b * y + c * z + d < -objeto.raio)) {
+            continue;
+          }
+        }
 
         const partes = malhasOBJ[objeto.modelo];
-        if (!partes) continue;
-
-        const matrizTranslacao = translacao(objeto.x, objeto.y, objeto.z);
-
-        const matrizRotacao = rotacaoY(objeto.rotacaoY ?? 0);
-
-        const matrizModelo = multiplicar(matrizTranslacao, matrizRotacao);
-
+        const matrizModelo = objeto.matrizModelo;
         const matrizFinal = multiplicar(camera, matrizModelo);
 
         const textura = texturasOBJ[objeto.modelo] ?? null;
@@ -635,7 +648,8 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
           const material = parte.material;
 
           const texturaMaterial = material?.diffuseMap || textura;
-          const corMaterial = material?.diffuse || cor;
+          const corEstofado = material?.nome.startsWith('tecido_') ? objeto.corEstofado : null;
+          const corMaterial = corEstofado ?? material?.diffuse ?? cor;
 
           let matrizModeloParte = matrizModelo;
 
@@ -677,11 +691,9 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             );
           }
 
-          // Cada porta recebe sua própria matriz.
-          const matrizFinalParte = multiplicar(
-            camera,
-            matrizModeloParte
-          );
+          const matrizFinalParte = porta
+            ? multiplicar(camera, matrizModeloParte)
+            : matrizFinal;
 
           const transformacaoUV =
             material?.uvTransform ??
@@ -699,7 +711,8 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             corMaterial,
             texturaMaterial,
             material,
-            transformacaoUV
+            transformacaoUV,
+            corEstofado ?? material?.ambient ?? corMaterial
           );
         }
       }
@@ -718,7 +731,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
 
           const posicao = translacao(
             jogador.x,
-            desenhadorPersonagem.deslocamentoSolo * escala,
+            (jogador.y ?? 0) + desenhadorPersonagem.deslocamentoSolo * escala,
             jogador.z
           );
 

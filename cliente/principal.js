@@ -1,4 +1,8 @@
-import { obterObjetosMapa, obterObjetoInterativoProximo } from "./mapa.js";
+import {
+  obterAlvosPorta,
+  obterObjetosMapa,
+  obterObjetoInterativoProximo,
+} from "./mapa.js";
 import { lerTeclas, configurarInteracao, configurarDrop } from "./teclado.js";
 import { enviarTeclas, enviarInteracao, obterSessao, enviarTrocaRadio, enviarDrop, enviarInteracaoPorta } from "./rede.js";
 import { criarRenderizador } from './renderizador.js';
@@ -13,23 +17,9 @@ import { leitorMTL } from "./leitorMTL.js";
 // Carregamento dos modelos obj 
 
 async function carregarModelos() {
-  const nomesModelos = [
-    "sala001.obj",
-    "mesa.obj",
-    "lixeira.obj",
-    "cadeira.obj",
-    "radio.obj",
-    "personagem.obj",
-    "office-desk.obj",
-    "office-chair.obj",
-    "ceiling-lamp.obj",
-    "computador2.obj",
-    "nc2a.obj",
-    "mesa-google.obj",
-    "pufe.obj",
-    "lousa.obj",
-    "cadeira-aula.obj"
-  ];
+  const nomesModelos = new Set(
+    obterObjetosMapa().map(objeto => objeto.modelo).filter(Boolean)
+  );
 
   const modelos = {};
 
@@ -269,15 +259,7 @@ async function iniciarJogo() {
       }));
 
       const portasInterativas = (estado?.portas ?? [])
-        .filter(porta => {
-          const alturaOlhos = (meuJogador?.y ?? 0) + 1.25;
-          return Math.abs(alturaOlhos - porta.y) <= 1.75;
-        })
-        .map(porta => ({
-          ...porta,
-          porta: true,
-          interativo: true
-        }));
+        .flatMap(porta => obterAlvosPorta(porta, meuJogador));
 
       const objetoProximo = meuJogador
         ? obterObjetoInterativoProximo(

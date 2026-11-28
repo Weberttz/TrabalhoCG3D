@@ -1,4 +1,44 @@
+import { gerarIluminacaoNC2A } from './iluminacaoNC2A.js';
 import { gerarMobiliarioSala } from './mobiliarioNC2A.js';
+import { MOBILIARIO_TERREO_NC2A } from './mobiliarioTerreoNC2A.js';
+
+// A face superior da laje fica um centímetro acima do topo das paredes do térreo.
+const PISO_SUPERIOR = 4.01;
+
+// Os limites X vêm das paredes laterais. No espaço local da sala,
+// o eixo +Z sempre aponta do fundo para a porta.
+function salaRetangular(nome, categoria, esquerda, direita, lado, y, configuracao = {}) {
+    const margemParede = 0.12;
+    return {
+        nome,
+        categoria,
+        area: {
+            minX: esquerda + margemParede,
+            maxX: direita - margemParede,
+            minZ: lado > 0 ? 4.1 : -11.9,
+            maxZ: lado > 0 ? 11.9 : -4.1
+        },
+        ancora: {
+            x: (esquerda + direita) / 2,
+            y,
+            z: lado * 8,
+            rotacaoY: lado > 0 ? Math.PI : 0
+        },
+        ...configuracao
+    };
+}
+
+function terreo(nome, categoria, esquerda, direita, lado) {
+    return salaRetangular(nome, categoria, esquerda, direita, lado, 0, {
+        ancora: { x: 0, y: 0, z: 0 },
+        gerarMobiliario: false,
+        objetos: MOBILIARIO_TERREO_NC2A[nome] ?? []
+    });
+}
+
+function superior(nome, categoria, esquerda, direita, lado, configuracao) {
+    return salaRetangular(nome, categoria, esquerda, direita, lado, PISO_SUPERIOR, configuracao);
+}
 
 export const PREDIO_NC2A = {
     nome: 'NC2A',
@@ -10,83 +50,25 @@ export const PREDIO_NC2A = {
             nivel: 0,
 
             salas: [
-                {
-                    nome: 'Corredor',
-                    categoria: 'circulacao'
-                },
-                {
-                    nome: 'Recepcao',
-                    categoria: 'recepcao'
-                },
-                {
-                    nome: 'CAIS',
-                    categoria: 'laboratorio'
-                },
-                {
-                    nome: 'Sala002',
-                    categoria: 'laboratorio',
-
-                    // Ponto onde a mobília é posicionada.
-                    ancora: {
-                        x: 27.4,
-                        y: 0,
-                        z: 9.5,
-                        rotacaoY: 0
-                    },
-
-                    // Área aproximada utilizada para
-                    // identificar a sala do jogador.
-                    area: {
-                        minX: 24.5,
-                        maxX: 31.0,
-                        minZ: 4.4,
-                        maxZ: 11.8
-                    },
-
-                    // Mantém os nomes já utilizados no jogo.
-                    nomesMobiliario: {
-                        mesa: 'mesaEscritorio01',
-                        cadeira: 'cadeiraEscritorio01',
-                        computador: 'computadorSala002',
-                        lampada: 'lampada01'
-                    },
-
-                    objetos: [
-                        {
-                            nome: 'radio01',
-                            modelo: 'radio.obj',
-                            dx: 0.4,
-                            dy: 0.9,
-                            dz: 0,
-                            solido: true,
-                            interativo: true
-                        },
-                        {
-                            nome: 'lixeira01',
-                            modelo: 'lixeira.obj',
-                            dx: 3.1,
-                            dy: 0,
-                            dz: 1.1,
-                            solido: true,
-                            interativo: true
-                        },
-                        {
-                            nome: 'blocoTeste01',
-                            modelo: null,
-                            dx: 1.6,
-                            dy: 0.2,
-                            dz: -0.5,
-                            ehBloco: true,
-                            tamanho: 0.4,
-                            cor: [0.9, 0.2, 0.2],
-                            item: true,
-                            podePegar: true,
-                            interativo: true,
-                            solido: false
-                        }
-                    ],
-                    interativos: ['mesa'],
-                }
+                { nome: 'Corredor', categoria: 'circulacao' },
+                terreo('Recepcao', 'recepcao', -1, 7, 1),
+                terreo('CAIS', 'laboratorio', 20, 45, -1),
+                terreo('Sala002', 'aula', 24, 31, 1),
+                // O OBJ repete o prefixo Sala002 no térreo. Os sufixos
+                // abaixo identificam cada sala pela porta correspondente.
+                terreo('Sala002.001', 'aula', 31, 38, 1),
+                terreo('Sala002.002', 'aula', 38, 45, 1),
+                terreo('Sala015', 'aula', -45, -34, 1),
+                terreo('Sala002.004', 'aula', -34, -27, 1),
+                terreo('Sala002.013', 'aula', -27, -10, 1),
+                terreo('Sala002.010', 'aula', 7, 24, 1),
+                terreo('Sala002.016', 'laboratorio', -45, -38, -1),
+                terreo('Sala002.007', 'laboratorio', -38, -31, -1),
+                terreo('Sala002.008', 'laboratorio', -31, -24, -1),
+                terreo('Sala002.009', 'laboratorio', -24, -9, -1),
+                terreo('Sala002.011', 'laboratorio', -9, -2, -1),
+                terreo('Sala002.012', 'laboratorio', -2, 5, -1),
+                terreo('Sala002.014', 'laboratorio', 5, 20, -1)
             ]
         },
         {
@@ -94,62 +76,49 @@ export const PREDIO_NC2A = {
             nivel: 1,
 
             salas: [
-                {
-                    nome: 'Corredor',
-                    categoria: 'circulacao'
-                },
-                {
-                    nome: 'Ladesc',
-                    categoria: 'laboratorio',
-                    ancora: {
-                        x: -41.5,
-                        y: 4,
-                        z: -8,
-                        rotacaoY: 0
-                    },
-                    area: {
-                        minX: -44.5,
-                        maxX: -38.5,
-                        minZ: -11.8,
-                        maxZ: -4.4
-                    }
-                },
-                {
-                    nome: 'GesadPesquisa',
-                    categoria: 'laboratorio',
-                    ancora: {
-                        x: -12.5,
-                        y: 4,
-                        z: -8,
-                        rotacaoY: 0
-                    },
-                    area: {
-                        minX: -15.5,
-                        maxX: -9.5,
-                        minZ: -11.8,
-                        maxZ: -4.4
-                    }
-                },
-                {
-                    nome: 'Secretaria',
-                    categoria: 'administrativo',
-                    ancora: {
-                        x: 1.5,
-                        y: 4,
-                        z: 8,
-                        rotacaoY: 0
-                    },
-                    area: {
-                        minX: -1.5,
-                        maxX: 4.5,
-                        minZ: 4.4,
-                        maxZ: 11.8
-                    }
-                },
-                {
-                    nome: 'Copa',
-                    categoria: 'copa'
-                }
+                { nome: 'Corredor', categoria: 'circulacao' },
+                { nome: 'Escada', categoria: 'circulacao' },
+                superior('Ladesc', 'laboratorio', -45, -38, -1),
+                superior('Lamac', 'laboratorio', -38, -31, -1),
+                superior('Incubauece', 'laboratorio', -31, -18.9, -1),
+                superior('GesadPesquisa', 'laboratorio', -18.9, -9, -1),
+                superior('LabChain', 'laboratorio', -45, -38, 1),
+                superior('Lagic', 'laboratorio', -38, -31, 1),
+                superior('Lasid', 'laboratorio', -31, -24, 1),
+                superior('Larces', 'laboratorio', -24, -10, 1),
+                superior('Embrapii', 'laboratorio', 7, 21.1, 1),
+                superior('Secretaria', 'administrativo', -1, 7, 1, {
+                    ancora: { x: 4.55, y: PISO_SUPERIOR, z: 10.6, rotacaoY: Math.PI },
+                    objetos: [
+                        { id: 'visita_1', modelo: 'cadeira.obj', dx: -0.85, dz: 2.95, rotacaoY: Math.PI, solido: true },
+                        { id: 'visita_2', modelo: 'cadeira.obj', dx: 0.85, dz: 2.95, rotacaoY: Math.PI, solido: true }
+                    ]
+                }),
+                superior('Copa', 'copa', 5.1, 15.1, -1, {
+                    ancora: { x: 7.8, y: PISO_SUPERIOR, z: -9.55 },
+                    objetos: [
+                        { id: 'lixeira', modelo: 'lixeira.obj', dx: 6.3, dz: -1.65, solido: true }
+                    ]
+                }),
+                superior('BanheiroFeminino', 'banheiro', -9, -2, -1, {
+                    objetos: [
+                        { id: 'lixeira', modelo: 'lixeira.obj', dx: 2.65, dz: 2.9, solido: true }
+                    ]
+                }),
+                superior('BanheiroMasculino', 'banheiro', -2, 5.1, -1, {
+                    objetos: [
+                        { id: 'lixeira', modelo: 'lixeira.obj', dx: 2.7, dz: 2.9, solido: true }
+                    ]
+                }),
+                superior('Sala104', 'aula', 15.1, 21.1, -1),
+                superior('Sala105', 'aula', 21.1, 27.1, 1),
+                superior('Sala106', 'aula', 21.1, 27.1, -1),
+                superior('Sala107', 'aula', 27.1, 33.1, 1),
+                superior('Sala108', 'aula', 27.1, 33.1, -1),
+                superior('Sala109', 'aula', 33.1, 39.1, 1),
+                superior('Sala110', 'aula', 33.1, 39.1, -1),
+                superior('Sala111', 'aula', 39.1, 45, 1),
+                superior('Sala112', 'aula', 39.1, 45, -1)
             ]
         }
     ]
@@ -193,6 +162,8 @@ export const MAPA = [
     )
 ];
 
+export const ILUMINACAO_NC2A = gerarIluminacaoNC2A(PREDIO_NC2A.andares);
+
 export function obterObjetosMapa() {
     const objetos = [];
 
@@ -227,7 +198,7 @@ export function obterObjetosMapa() {
         }
     }
 
-    return objetos;
+    return [...objetos, ...ILUMINACAO_NC2A.luminarias];
 }
 
 // Determina a sala lógica do jogador em áreas
@@ -259,6 +230,23 @@ export function obterSalaEmPosicao(andar, x, z) {
 export const COLISORES_QUARTO =
     obterObjetosMapa().filter(objeto => objeto.solido);
 
+
+export function obterAlvosPorta(porta, jogador) {
+    if (!jogador || Math.abs((jogador.y ?? 0) + 1.25 - porta.y) > 1.75) return [];
+
+    const alvo = { ...porta, porta: true, interativo: true };
+    const alvos = [alvo];
+
+    if (porta.centroPar) {
+        alvos.push({ ...alvo, ...porta.centroPar });
+    }
+
+    if (porta.aberta) {
+        alvos.push({ ...alvo, ...porta.centroAberto });
+    }
+
+    return alvos;
+}
 
 // Retorna o objeto próximo ao jogador, se ele estiver olhando
 export function obterObjetoInterativoProximo(
