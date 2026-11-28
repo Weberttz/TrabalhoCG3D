@@ -57,7 +57,8 @@ function localizarArquivo(url) {
     'constantesTasks.js',
     'estruturaPredio.js',
     'catalogoNC2A.js',
-    'mobiliarioNC2A.js'
+    'mobiliarioNC2A.js',
+    'salasNC2A.js'
   ];
 
   if (compartilhados.includes(caminhoURL.slice(1))) {
