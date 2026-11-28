@@ -78,8 +78,22 @@ export const PREDIO_NC2A = {
                             dz: -0.5,
                             ehBloco: true,
                             tamanho: 0.1,
-                            cor: [0.9, 0.2, 0.2],
+                            cor: [0, 0, 0],
                             item: true,
+                            podePegar: true,
+                            interativo: true,
+                            solido: false
+                        },
+                        {
+                            nome: 'chave01',
+                            modelo: null,
+                            dx: 1.0,
+                            dy: 0.2,
+                            dz: -2,
+                            item: true,
+                            cor: [0.9, 0.2, 0.2],
+                            tamanho: 0.1,
+                            ehBloco: true,
                             podePegar: true,
                             interativo: true,
                             solido: false

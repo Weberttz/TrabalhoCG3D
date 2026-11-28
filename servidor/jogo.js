@@ -1,11 +1,12 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
 import { Predio } from '../compartilhado/estruturaPredio.js';
 import { MAPA, obterObjetosMapa, obterSalaEmPosicao } from '../compartilhado/mapa.js';
-import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
 import { catalogarNC2A } from '../compartilhado/classificadorNC2A.js';
+import { TaskProximidade } from './tasks/TaskProximidade.js';
+import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
+import { TaskAbrirPorta } from './tasks/TaskAbrirPorta.js';
 
 const MUSICAS_RADIO = [
     '/audios/Reflections.mp3',
@@ -226,6 +227,48 @@ export class Jogo {
         }
 
         this.criarPortasDaEstrutura();
+
+        const NOME_CHAVE = 'chave01';
+        const NOME_PORTA = 'Andar00__Sala002__Int__Porta.002';
+        const portaAlvo = this.portas.get(NOME_PORTA);
+
+        const taskPorta = new TaskAbrirPorta({
+            id: 'task_abrir_porta_02',
+            jogadorId: null,
+            nomeItemChave: NOME_CHAVE,
+            x: portaAlvo?.x ?? 0,
+            z: portaAlvo?.z ?? 0
+        });
+        this.tasks.set(taskPorta.id, taskPorta);
+
+        // 1. Pegar a chave atribui a missão; soltar no chão desassocia
+        this.configurarEventosItem('Sala002', NOME_CHAVE, {
+            aoPegar: (item, jogador) => {
+                if (taskPorta.status === 'pendente') {
+                    taskPorta.atribuirPara(jogador);
+                }
+            },
+            aoSoltar: (item, jogador) => {
+                if (
+                    taskPorta.status === 'em_andamento' &&
+                    jogador &&
+                    taskPorta.jogadorId === jogador.id
+                ) {
+                    taskPorta.liberar();
+                }
+            }
+        });
+
+        // 2. Sobrescreve a interação da porta apenas até ela ser destrancada
+        this.definirFuncaoInteracaoPorta(NOME_PORTA, (porta, jogador) => {
+            if (taskPorta.destrancarPorta(jogador)) {
+                porta.aberta = true;
+
+                // Remove o comportamento customizado: a partir de agora
+                // ela abre e fecha normalmente para qualquer jogador.
+                porta.aoInteragir = null;
+            }
+        });
 
         // Diagnóstico.
         for (const andar of Object.values(
@@ -601,18 +644,17 @@ export class Jogo {
             this.portas.set(caixa.nome, {
                 nome: caixa.nome,
 
-                // Posição global para interação.
                 x: centroX + estrutura.posicao.x,
                 y: centroY + estrutura.posicao.y,
                 z: centroZ + estrutura.posicao.z,
 
-                // Pivô local do arquivo OBJ.
                 pivoX,
                 pivoZ,
 
                 sentido,
                 aberta: false,
-                ultimaInteracaoEm: 0
+                ultimaInteracaoEm: 0,
+                aoInteragir: null
             });
         }
 
@@ -661,6 +703,12 @@ export class Jogo {
         }
 
         porta.ultimaInteracaoEm = agora;
+
+        if (typeof porta.aoInteragir === 'function') {
+            porta.aoInteragir(porta, jogador);
+            return true;
+        }
+
         porta.aberta = !porta.aberta;
 
         console.log(
@@ -668,6 +716,14 @@ export class Jogo {
             porta.aberta ? 'Aberta' : 'Fechada'
         );
 
+        return true;
+    }
+
+    definirFuncaoInteracaoPorta(nomePorta, funcaoDeInteracao) {
+        const porta = this.portas.get(nomePorta);
+        if (!porta) return false;
+
+        porta.aoInteragir = funcaoDeInteracao;
         return true;
     }
 
