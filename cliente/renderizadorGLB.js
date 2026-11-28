@@ -1,3 +1,5 @@
+import { GLSL_ILUMINACAO } from './iluminacao.js';
+
 /**
  * Renderizador de personagens GLB.
  *
@@ -28,6 +30,7 @@ uniform mat4 uModelo;
 uniform mat4 uOssos[${MAX_OSSOS}];
 
 out vec3 vNormal;
+out vec3 vPosicaoMundo;
 out vec2 vUV;
 
 void main() {
@@ -43,6 +46,7 @@ void main() {
     gl_Position = uMVP * posicaoAnimada;
 
     vNormal = mat3(uModelo * pele) * aNormal;
+    vPosicaoMundo = (uModelo * posicaoAnimada).xyz;
 
     vUV = aUV;
 }
@@ -54,6 +58,7 @@ const FRAGMENTO = `#version 300 es
 precision highp float;
 
 in vec3 vNormal;
+in vec3 vPosicaoMundo;
 in vec2 vUV;
 
 uniform vec3 uCor;
@@ -62,20 +67,9 @@ uniform sampler2D uTextura;
 
 out vec4 corFinal;
 
+${GLSL_ILUMINACAO}
+
 void main() {
-    vec3 normal = normalize(vNormal);
-
-    vec3 luz = normalize(
-        vec3(0.35, 0.9, 0.45)
-    );
-
-    float intensidade =
-        0.45 +
-        0.55 * max(
-            dot(normal, luz),
-            0.0
-        );
-
     vec3 corBase = uCor;
 
     if (uUsarTextura) {
@@ -85,10 +79,9 @@ void main() {
         ).rgb;
     }
 
-    corFinal = vec4(
-        corBase * intensidade,
-        1.0
-    );
+    vec3 resultado = aplicarLuzes(vPosicaoMundo, normalize(vNormal), corBase,
+        corBase, vec3(0.0), 32.0, vec3(0.25, 0.94, 0.22));
+    corFinal = vec4(limitarAltasLuzes(resultado), 1.0);
 }
 `;
 
@@ -165,7 +158,8 @@ function criarPrograma(gl) {
 
 export function criarDesenhadorGLB(
     gl,
-    modeloGLB
+    modeloGLB,
+    iluminacao
 ) {
     const skin =
         modeloGLB.esqueletos?.[0];
@@ -184,6 +178,10 @@ export function criarDesenhadorGLB(
     }
 
     const programa = criarPrograma(gl);
+    const programaAnterior = gl.getParameter(gl.CURRENT_PROGRAM);
+    gl.useProgram(programa);
+    iluminacao.configurarPrograma(programa);
+    gl.useProgram(programaAnterior);
 
     const uMVP = gl.getUniformLocation(
         programa,

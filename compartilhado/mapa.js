@@ -1,3 +1,4 @@
+import { gerarIluminacaoNC2A } from './iluminacaoNC2A.js';
 import { gerarMobiliarioSala } from './mobiliarioNC2A.js';
 import { MOBILIARIO_TERREO_NC2A } from './mobiliarioTerreoNC2A.js';
 
@@ -161,6 +162,8 @@ export const MAPA = [
     )
 ];
 
+export const ILUMINACAO_NC2A = gerarIluminacaoNC2A(PREDIO_NC2A.andares);
+
 export function obterObjetosMapa() {
     const objetos = [];
 
@@ -195,7 +198,7 @@ export function obterObjetosMapa() {
         }
     }
 
-    return objetos;
+    return [...objetos, ...ILUMINACAO_NC2A.luminarias];
 }
 
 // Determina a sala lógica do jogador em áreas

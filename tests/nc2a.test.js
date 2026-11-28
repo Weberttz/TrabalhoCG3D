@@ -3,7 +3,9 @@ import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { leitorOBJ } from '../cliente/leitorOBJ.js';
 import { leitorMTL } from '../cliente/leitorMTL.js';
+import { prepararIluminacao } from '../cliente/iluminacao.js';
 import {
+    ILUMINACAO_NC2A,
     obterAlvosPorta,
     obterObjetoInterativoProximo,
     obterObjetosMapa,
@@ -46,7 +48,7 @@ function sobrepoem(a, b) {
 }
 
 test('a mobília cabe nas salas e fica fora do giro das portas', async () => {
-    const objetos = obterObjetosMapa().filter(objeto => objeto.modelo && objeto.sala !== 'nc2a');
+    const objetos = obterObjetosMapa().filter(objeto => objeto.modelo && objeto.sala !== 'nc2a' && !objeto.luz);
     const modelos = new Map(jogo.modelosColisao);
 
     for (const modelo of new Set(objetos.map(objeto => objeto.modelo))) {
@@ -126,7 +128,7 @@ test('a mobília cabe nas salas e fica fora do giro das portas', async () => {
 });
 
 test('o térreo respeita as salas vazias e os assentos e equipamentos da planta', () => {
-    const objetos = obterObjetosMapa().filter(objeto => objeto.andar === 'Andar00');
+    const objetos = obterObjetosMapa().filter(objeto => objeto.andar === 'Andar00' && !objeto.luz);
     const vazias = ['Sala015', 'Sala002.004', 'Sala002.008', 'Sala002.011',
         'Sala002.012', 'Sala002.013', 'Sala002.016'];
     for (const sala of vazias) {
@@ -187,6 +189,58 @@ async function lerModeloComMateriais(nome) {
     const materiais = leitorMTL.parseMTL(await readFile(biblioteca, 'utf8'));
     return { ...modelo, biblioteca, materiais };
 }
+
+test('as luminárias ficam junto ao teto e cada pavimento recebe as próprias fontes', async () => {
+    const { luminarias, zonas } = ILUMINACAO_NC2A;
+    const limites = new Map();
+    for (const modelo of new Set(luminarias.map(luminaria => luminaria.modelo))) {
+        const arquivo = new URL(`../cliente/modelosOBJ/${modelo}`, import.meta.url);
+        limites.set(modelo, (await carregarColisoesOBJ(arquivo)).colisores);
+    }
+
+    const luminariasDoMapa = obterObjetosMapa().filter(objeto => objeto.luz);
+    assert.deepEqual(luminariasDoMapa, luminarias);
+    assert.equal(new Set(luminarias.map(luminaria => luminaria.nome)).size, luminarias.length);
+    for (const luminaria of luminarias) {
+        const { nome, modelo, andar, sala, y, luz } = luminaria;
+        const teto = andar === 'Andar00' ? 3.88 : 8;
+        const caixas = limites.get(modelo);
+        assert.ok(Math.abs(y + Math.max(...caixas.map(caixa => caixa.maximoY)) - teto) < EPSILON, nome);
+        assert.ok(y + Math.min(...caixas.map(caixa => caixa.minimoY)) > teto - 0.90, nome);
+        assert.ok(luz.y > teto - 0.90 && luz.y < teto, nome);
+        assert.equal(luminaria.solido, false, nome);
+
+        if (sala === 'Corredor') {
+            assert.equal(modelo, 'plafon-corredor.obj');
+        } else if (andar === 'Andar00' && sala === 'Sala002.014') {
+            assert.equal(modelo, 'ceiling-lamp.obj');
+            assert.ok(luz.cor[0] > luz.cor[1] && luz.cor[1] > luz.cor[2]);
+        } else {
+            assert.equal(modelo, 'lampada-bulbo.obj');
+        }
+    }
+
+    for (const andar of PREDIO_NC2A.andares) {
+        for (const sala of andar.salas) {
+            assert.equal(luminarias.some(l => l.andar === andar.nome && l.sala === sala.nome),
+                Boolean(sala.area || sala.nome === 'Corredor'), sala.nome);
+        }
+    }
+
+    const { dados, indices, larguraFontes } = prepararIluminacao({ luminarias, zonas });
+    assert.ok(larguraFontes < 256);
+    for (const [nivel, andar] of PREDIO_NC2A.andares.entries()) {
+        const metade = indices.length / 2;
+        const ids = new Set(indices.subarray(nivel * metade, (nivel + 1) * metade));
+        ids.delete(0);
+        const fontesEsperadas = luminarias.filter(l => l.andar === andar.nome);
+        assert.equal(ids.size, fontesEsperadas.length);
+        for (const id of ids) {
+            assert.equal(luminarias[id - 1].andar, andar.nome);
+            assert.ok(dados[(id - 1) * 4 + 3] > 0);
+        }
+    }
+});
 
 test('o pavimento superior usa cadeiras com apoio, pés no piso e textura UV', async () => {
     const arquivo = 'cadeira-aula-jogo.obj';

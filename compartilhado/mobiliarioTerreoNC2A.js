@@ -79,7 +79,7 @@ function mesaComPufes(id, x, z) {
 
 function salaAula(esquerda, xProfessor, zProfessor, colunas, fileiras, mesa = {}) {
     return [
-        movel('lousa', 'lousa-terreo.obj', esquerda + 0.14, zProfessor, -QUARTO_DE_VOLTA, { dy: 1.02 }),
+        movel('lousa', 'lousa-terreo.obj', esquerda + 0.225, zProfessor, -QUARTO_DE_VOLTA, { dy: 1.02 }),
         movel('mesa_professor', 'mesa.obj', xProfessor, zProfessor, QUARTO_DE_VOLTA, mesa),
         movel('cadeira_professor', 'cadeira-aula-jogo.obj', xProfessor - 1, zProfessor, QUARTO_DE_VOLTA),
         ...fileiras.flatMap((z, fila) =>
@@ -105,8 +105,6 @@ export const MOBILIARIO_TERREO_NC2A = {
             { nome: 'radio01', dy: 0.964, interativo: true }),
         movel('lixeira', 'lixeira.obj', 30.47, 11.34, 0,
             { nome: 'lixeira01', interativo: true }),
-        movel('lampada', 'ceiling-lamp.obj', 27.5, 8.24, 0,
-            { nome: 'lampada01', dy: 3.087, solido: false }),
         {
             nome: 'blocoTeste01',
             dx: 27.17,
