@@ -439,6 +439,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     textura,
     material = null,
     transformacaoUV = null,
+    corAmbiente = material?.ambient ?? cor,
   ) {
     gl.uniform2fv(
       uniformeEscalaUV,
@@ -454,7 +455,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     gl.uniformMatrix4fv(uniformeModelo, false, matrizModelo);
     gl.uniform3fv(uniformeCor, cor);
 
-    gl.uniform3fv(uniformeCorAmbiente, material?.ambient ?? cor);
+    gl.uniform3fv(uniformeCorAmbiente, corAmbiente);
     gl.uniform3fv(uniformeCorEspecular, material?.specular ?? [1, 1, 1]);
     gl.uniform3fv(uniformeCorEmissiva, material?.emissive ?? [0, 0, 0]);
     gl.uniform1f(uniformeBrilho, material?.shininess ?? 400);
@@ -691,7 +692,8 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
           const material = parte.material;
 
           const texturaMaterial = material?.diffuseMap || textura;
-          const corMaterial = material?.diffuse || cor;
+          const corEstofado = material?.nome.startsWith('tecido_') ? objeto.corEstofado : null;
+          const corMaterial = corEstofado ?? material?.diffuse ?? cor;
 
           let matrizModeloParte = matrizModelo;
 
@@ -753,7 +755,8 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             corMaterial,
             texturaMaterial,
             material,
-            transformacaoUV
+            transformacaoUV,
+            corEstofado ?? material?.ambient ?? corMaterial
           );
         }
       }

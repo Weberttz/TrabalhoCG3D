@@ -70,7 +70,9 @@ test('a mobília cabe nas salas e fica fora do giro das portas', async () => {
     for (const andar of PREDIO_NC2A.andares) {
         for (const sala of andar.salas) {
             const moveis = mobilia.filter(objeto => objeto.andar === andar.nome && objeto.sala === sala.nome);
-            if (sala.categoria === 'circulacao') {
+            const vazia = sala.categoria === 'circulacao' ||
+                (sala.gerarMobiliario === false && sala.objetos.length === 0);
+            if (vazia) {
                 assert.equal(moveis.length, 0, sala.nome);
                 continue;
             }
@@ -87,6 +89,15 @@ test('a mobília cabe nas salas e fica fora do giro das portas', async () => {
                 for (const outro of moveis.slice(i + 1)) {
                     assert.ok(!sobrepoem(limites, outro.limites), `${nome} × ${outro.nome}`);
                 }
+            }
+            for (const notebook of moveis.filter(objeto => objeto.modelo === 'notebook.obj')) {
+                const apoios = moveis.filter(objeto => /^(mesa|bancada)/.test(objeto.modelo));
+                const b = notebook.limites;
+                assert.ok(apoios.some(({ limites: a }) =>
+                    Math.abs(a.maxY - b.minY) < EPSILON &&
+                    b.minX >= a.minX && b.maxX <= a.maxX &&
+                    b.minZ >= a.minZ && b.maxZ <= a.maxZ
+                ), notebook.nome);
             }
         }
     }
@@ -114,6 +125,61 @@ test('a mobília cabe nas salas e fica fora do giro das portas', async () => {
     }
 });
 
+test('o térreo respeita as salas vazias e os assentos e equipamentos da planta', () => {
+    const objetos = obterObjetosMapa().filter(objeto => objeto.andar === 'Andar00');
+    const vazias = ['Sala015', 'Sala002.004', 'Sala002.008', 'Sala002.011',
+        'Sala002.012', 'Sala002.013', 'Sala002.016'];
+    for (const sala of vazias) {
+        assert.ok(objetos.every(objeto => objeto.sala !== sala), sala);
+    }
+
+    const contar = (sala, modelo) =>
+        objetos.filter(objeto => objeto.sala === sala && objeto.modelo === modelo).length;
+
+    assert.equal(contar('Sala002.010', 'cadeira-aula-jogo.obj'), 41);
+    for (const sala of ['Sala002', 'Sala002.001', 'Sala002.002']) {
+        assert.equal(contar(sala, 'cadeira-aula-jogo.obj'), 7);
+        assert.equal(contar(sala, 'lousa-terreo.obj'), 1);
+    }
+    assert.equal(contar('Sala002.007', 'notebook.obj'), 6);
+    assert.equal(contar('Sala002.009', 'notebook.obj'), 12);
+    assert.equal(contar('Sala002.007', 'office-chair-jogo.obj'), 14);
+    assert.equal(contar('Sala002.009', 'office-chair-jogo.obj'), 12);
+    assert.equal(contar('Sala002.014', 'mesa-google.obj'), 2);
+    assert.equal(contar('Sala002.014', 'pufe.obj'), 8);
+
+    const cadeiras = objetos.filter(objeto => objeto.sala === 'Sala002.014' && objeto.modelo === 'cadeira.obj');
+    assert.equal(cadeiras.length, 16);
+    const cores = new Map();
+    for (const cadeira of cadeiras) {
+        const rgb = cadeira.corEstofado.join(',');
+        cores.set(rgb, (cores.get(rgb) ?? 0) + 1);
+    }
+    assert.deepEqual([...cores.values()], [4, 4, 4, 4]);
+});
+
+test('é possível atravessar os quatro corredores entre fileiras do auditório', () => {
+    const porta = jogo.portas.get('Andar00__Sala002__Int__Porta.010');
+    const jogador = { id: -1, x: porta.x, y: 0, z: 2.5 };
+    porta.aberta = true;
+    try {
+        function caminhar(x, z) {
+            jogo.movimentarComColisao(jogador, x - jogador.x, z - jogador.z);
+            assert.ok(Math.hypot(jogador.x - x, jogador.z - z) < EPSILON, `Destino (${x}, ${z})`);
+        }
+
+        caminhar(porta.x, 5.86);
+        caminhar(12.32, 5.86);
+        for (const fileira of [5.86, 7.285, 8.715, 10.14]) {
+            caminhar(12.32, fileira);
+            caminhar(23.53, fileira);
+            caminhar(12.32, fileira);
+        }
+    } finally {
+        porta.aberta = false;
+    }
+});
+
 async function lerModeloComMateriais(nome) {
     const caminho = new URL(`../cliente/modelosOBJ/${nome}`, import.meta.url);
     const modelo = leitorOBJ.parseOBJ(await readFile(caminho, 'utf8'));
@@ -122,7 +188,7 @@ async function lerModeloComMateriais(nome) {
     return { ...modelo, biblioteca, materiais };
 }
 
-test('as salas de aula usam cadeiras com apoio, pés no piso e textura UV', async () => {
+test('o pavimento superior usa cadeiras com apoio, pés no piso e textura UV', async () => {
     const arquivo = 'cadeira-aula-jogo.obj';
     const modelo = await lerModeloComMateriais(arquivo);
     assert.equal(modelo.malhas.length, 1);
@@ -139,7 +205,7 @@ test('as salas de aula usam cadeiras com apoio, pés no piso e textura UV', asyn
     }
 
     const objetos = obterObjetosMapa();
-    for (const andar of PREDIO_NC2A.andares) {
+    for (const andar of PREDIO_NC2A.andares.filter(andar => andar.nivel > 0)) {
         for (const sala of andar.salas.filter(sala => sala.categoria === 'aula')) {
             const assentos = objetos.filter(objeto =>
                 objeto.sala === sala.nome && objeto.andar === andar.nome && objeto.modelo === arquivo
@@ -293,8 +359,8 @@ test('a interação no centro abre as portas duplas e conecta os setores do tér
 
 test('a colisão acompanha a mesa girada e a escala da lousa', () => {
     const terreo = { id: -1, y: 0 };
-    assert.equal(jogo.podeOcupar(terreo, 25.22, 8.15), false);
-    assert.equal(jogo.podeOcupar(terreo, 26.02, 8.15), true);
+    assert.equal(jogo.podeOcupar(terreo, 26.92, 8.48), false);
+    assert.equal(jogo.podeOcupar(terreo, 27.68, 8.48), true);
 
     const superior = { id: -1, y: 4.01 };
     const quadro = obterObjetosMapa().find(objeto =>
@@ -318,7 +384,7 @@ test('dois jogadores entram na Sala 002 e alcançam os objetivos', () => {
     primeiro.anguloHorizontal = Math.PI;
     assert.ok(jogo.alternarPorta(primeiro.id, 'Andar00__Sala002__Int__Porta'));
     caminhar(primeiro, 27.55, 6.3);
-    caminhar(primeiro, 26.85, 8);
+    caminhar(primeiro, 27.68, 8.68);
     jogo.atualizar(0);
     assert.equal(primeiro.sala, 'Sala002');
 
@@ -326,23 +392,25 @@ test('dois jogadores entram na Sala 002 e alcançam os objetivos', () => {
     assert.ok(jogo.interagirComObjetoProximo(primeiro.id));
     assert.equal(lixo.jogadorId, primeiro.id);
 
-    caminhar(primeiro, 27, 10.75);
+    caminhar(primeiro, 27.68, 9.90);
     assert.ok(jogo.interagirComObjetoProximo(primeiro.id));
     assert.equal(jogo.radio.ligado, true);
-    caminhar(primeiro, 28.5, 9.35);
+    caminhar(primeiro, 27.65, 10.94);
     assert.ok(jogo.interagirComObjetoProximo(primeiro.id));
     assert.equal(primeiro.itemSegurado, 'blocoTeste01');
     assert.ok(jogo.soltarItemJogador(primeiro.id));
 
-    caminhar(primeiro, 29.5, 10.65);
+    caminhar(primeiro, 27.65, 11.42);
+    caminhar(primeiro, 29.85, 11.42);
     assert.ok(jogo.interagirComObjetoProximo(primeiro.id));
     assert.equal(lixo.status, 'concluida');
 
-    caminhar(primeiro, 28, 10);
+    caminhar(primeiro, 27.68, 11.42);
+    caminhar(primeiro, 27.68, 6.35);
+    caminhar(primeiro, 25.55, 6.35);
     caminhar(segundo, 27.55, 2.5);
-    caminhar(segundo, 27.55, 6.3);
-    caminhar(segundo, 29.9, 8);
-    caminhar(segundo, 29.9, 10);
+    caminhar(segundo, 27.55, 6.35);
+    caminhar(segundo, 29.85, 6.35);
 
     for (let passo = 0; passo < 61; passo++) {
         jogo.atualizar(0.05);

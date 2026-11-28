@@ -1,0 +1,6 @@
+newmtl office-chair_body_pbr
+Ka 0.85 0.85 0.85
+Kd 1 1 1
+Ks 0.29 0.29 0.29
+Ns 36
+map_Kd ../texturas/office-chair_body_basecolor.jpg

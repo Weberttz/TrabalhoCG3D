@@ -1,4 +1,5 @@
 import { gerarMobiliarioSala } from './mobiliarioNC2A.js';
+import { MOBILIARIO_TERREO_NC2A } from './mobiliarioTerreoNC2A.js';
 
 // A face superior da laje fica um centímetro acima do topo das paredes do térreo.
 const PISO_SUPERIOR = 4.01;
@@ -26,8 +27,12 @@ function salaRetangular(nome, categoria, esquerda, direita, lado, y, configuraca
     };
 }
 
-function terreo(nome, categoria, esquerda, direita, lado, configuracao) {
-    return salaRetangular(nome, categoria, esquerda, direita, lado, 0, configuracao);
+function terreo(nome, categoria, esquerda, direita, lado) {
+    return salaRetangular(nome, categoria, esquerda, direita, lado, 0, {
+        ancora: { x: 0, y: 0, z: 0 },
+        gerarMobiliario: false,
+        objetos: MOBILIARIO_TERREO_NC2A[nome] ?? []
+    });
 }
 
 function superior(nome, categoria, esquerda, direita, lado, configuracao) {
@@ -45,72 +50,14 @@ export const PREDIO_NC2A = {
 
             salas: [
                 { nome: 'Corredor', categoria: 'circulacao' },
-                terreo('Recepcao', 'recepcao', -1, 7, 1, {
-                    ancora: { x: 5.25, y: 0, z: 7.15, rotacaoY: Math.PI / 2 }
-                }),
+                terreo('Recepcao', 'recepcao', -1, 7, 1),
                 terreo('CAIS', 'laboratorio', 20, 45, -1),
-                terreo('Sala002', 'laboratorio', 24, 31, 1, {
-                    layout: 'administrativo',
-                    ancora: { x: 25.22, y: 0, z: 8.85, rotacaoY: Math.PI / 2 },
-                    nomesMobiliario: {
-                        mesa: 'mesaEscritorio01',
-                        cadeira: 'cadeiraEscritorio01',
-                        computador: 'computadorSala002'
-                    },
-                    objetos: [
-                        {
-                            id: 'apoio_radio',
-                            modelo: 'mesa.obj',
-                            dx: -2.05,
-                            solido: true
-                        },
-                        {
-                            nome: 'radio01',
-                            modelo: 'radio.obj',
-                            dx: -2.05,
-                            dy: 0.964,
-                            solido: true,
-                            interativo: true
-                        },
-                        {
-                            nome: 'lampada01',
-                            modelo: 'ceiling-lamp.obj',
-                            dx: 0.6,
-                            // O topo da luminária encosta na face inferior da laje.
-                            dy: 3.087,
-                            dz: 2.28
-                        },
-                        {
-                            nome: 'lixeira01',
-                            modelo: 'lixeira.obj',
-                            dx: -1.75,
-                            dz: 5.28,
-                            solido: true,
-                            interativo: true
-                        },
-                        {
-                            nome: 'blocoTeste01',
-                            modelo: null,
-                            dx: -0.15,
-                            dy: 0.2,
-                            dz: 3.78,
-                            ehBloco: true,
-                            tamanho: 0.4,
-                            cor: [0.9, 0.2, 0.2],
-                            item: true,
-                            podePegar: true,
-                            interativo: true
-                        }
-                    ],
-                    interativos: ['mesa']
-                }),
+                terreo('Sala002', 'aula', 24, 31, 1),
                 // O OBJ repete o prefixo Sala002 no térreo. Os sufixos
                 // abaixo identificam cada sala pela porta correspondente.
-                terreo('Sala002.001', 'laboratorio', 31, 38, 1),
-                terreo('Sala002.002', 'laboratorio', 38, 45, 1),
-                terreo('Sala015', 'aula', -45, -34, 1, {
-                    ancora: { x: -37.5, y: 0, z: 8, rotacaoY: Math.PI }
-                }),
+                terreo('Sala002.001', 'aula', 31, 38, 1),
+                terreo('Sala002.002', 'aula', 38, 45, 1),
+                terreo('Sala015', 'aula', -45, -34, 1),
                 terreo('Sala002.004', 'aula', -34, -27, 1),
                 terreo('Sala002.013', 'aula', -27, -10, 1),
                 terreo('Sala002.010', 'aula', 7, 24, 1),

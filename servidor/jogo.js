@@ -254,11 +254,12 @@ export class Jogo {
             }
         }
 
+        const destinoLixo = this.andar.salas.Sala002.objetos.lixeira01.posicao;
         const taskLixo = new TaskJogarLixo({
             id: 'task_lixo_sala002',
             jogadorId: null,
-            x: 30.5,
-            z: 10.6
+            x: destinoLixo.x,
+            z: destinoLixo.z
         });
         this.tasks.set(taskLixo.id, taskLixo);
 
@@ -388,8 +389,8 @@ export class Jogo {
                 id: taskId,
                 jogadorId: jogador.id,
 
-                x: cubo === 0 ? 28 : 29.9,
-                z: 10,
+                x: cubo === 0 ? 25.55 : 29.85,
+                z: 6.35,
 
                 tempoNecessario: 3
             })

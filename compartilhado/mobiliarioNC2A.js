@@ -32,18 +32,6 @@ const escritorio = [
     { id: 'computador', modelo: 'computador.obj', dy: 0.74, dz: -0.03 }
 ];
 
-function pufe(id, dx, dz) {
-    // A origem do OBJ fica acima e ao lado do assento.
-    return {
-        id,
-        modelo: 'pufe.obj',
-        dx: dx + 0.5075,
-        dy: 0.997,
-        dz: dz + 0.5065,
-        solido: true
-    };
-}
-
 function aula() {
     return [
         {
@@ -81,11 +69,6 @@ const MOBILIARIO = {
     laboratorio,
     aula,
     administrativo: () => escritorio,
-    recepcao: () => [
-        ...escritorio,
-        pufe('pufe_1', 0.05, -5.09),
-        pufe('pufe_2', -2.1, -5.09)
-    ],
     copa: () => [
         {
             id: 'mesa',
@@ -143,6 +126,7 @@ export function gerarMobiliarioSala(sala, nomeAndar) {
             escala: componente.escala ?? 1,
 
             cor: componente.cor ?? [1, 1, 1],
+            corEstofado: componente.corEstofado,
 
             solido: componente.solido ?? false,
             interativo: componente.interativo ??
