@@ -262,12 +262,16 @@ async function iniciarJogo() {
           String(jogador.id) === String(meuId)
       );
 
+      const jaSegurandoAlgo = (estado?.itens ?? []).some(
+        item => String(item.seguradoPor) === String(meuId)
+      );
+
       const itensServidor = (estado?.itens ?? []).map(item => ({
         ...item,
         item: true,
-        interativo: item.visivel && item.podePegar,
+        interativo: item.visivel && item.podePegar && !jaSegurandoAlgo,
       }));
-
+      
       const portasInterativas = (estado?.portas ?? [])
         .filter(porta => {
           const alturaOlhos = (meuJogador?.y ?? 0) + 1.25;

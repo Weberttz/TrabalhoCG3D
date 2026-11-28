@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
-import { Predio } from '../compartilhado/estruturaPredio.js';
-import { MAPA, obterObjetosMapa, obterSalaEmPosicao } from '../compartilhado/mapa.js';
+import { ObjetoInterativo, Predio } from '../compartilhado/estruturaPredio.js';
+import { MAPA, obterObjetosMapa, obterSalaEmPosicao, obterObjetoInterativoProximo } from '../compartilhado/mapa.js';
 import { catalogarNC2A } from '../compartilhado/classificadorNC2A.js';
 import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
@@ -169,6 +169,7 @@ export class Jogo {
                     descricao.modelo,
                     descricao.solido
                 );
+                objeto.interativo = true;
             } else {
                 objeto = sala.criarObjeto(
                     descricao.nome,
@@ -562,42 +563,31 @@ export class Jogo {
         const andar = this.predio.andares[jogador.andar];
         if (!andar) return false;
 
-        let objetoMaisProximo = null;
-        let menorDistancia = raioMaximo;
+        const direcaoOlhar = {
+            x: Math.sin(jogador.anguloHorizontal),
+            z: -Math.cos(jogador.anguloHorizontal)
+        };
 
-        for (const sala of Object.values(andar.salas)) {
-            for (const objeto of Object.values(sala.objetos)) {
-                if (typeof objeto.interagir !== 'function') continue;
-                if (objeto.visivel === false) continue;
-                if ('podePegar' in objeto && !objeto.podePegar) continue;
+        const candidatos = Object.values(andar.salas).flatMap(
+            sala => Object.values(sala.objetos)
+        );
 
-                let alvoX = objeto.posicao.x;
-                let alvoZ = objeto.posicao.z;
+        const objetoMaisProximo = obterObjetoInterativoProximo(
+            jogador,
+            candidatos,
+            direcaoOlhar,
+            raioMaximo,
+            35
+        );
 
-                if (objeto.aabb && objeto.aabb.length > 0) {
-                    const caixa = objeto.aabb[0];
-                    alvoX += (caixa.minimoX + caixa.maximoX) / 2;
-                    alvoZ += (caixa.minimoZ + caixa.maximoZ) / 2;
-                }
-
-                const distancia = Math.hypot(jogador.x - alvoX, jogador.z - alvoZ);
-
-                if (distancia <= menorDistancia) {
-                    menorDistancia = distancia;
-                    objetoMaisProximo = objeto;
-                }
-            }
-        }
-
-        if (!objetoMaisProximo) {
-            console.log(`[Jogo] Jogador ${jogadorId} apertou 'E', mas não há objeto interativo por perto.`);
+        if (!objetoMaisProximo || typeof objetoMaisProximo.interagir !== 'function') {
             return false;
         }
 
-        console.log(`[Jogo] Jogador ${jogadorId} interagiu com "${objetoMaisProximo.nome}" (distância: ${menorDistancia.toFixed(2)}m)`);
         if ('podePegar' in objetoMaisProximo && jogador.itemSegurado) {
             return false;
         }
+
         objetoMaisProximo.interagir(jogador);
         return true;
     }

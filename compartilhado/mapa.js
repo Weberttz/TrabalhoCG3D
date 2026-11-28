@@ -308,9 +308,21 @@ export function obterObjetoInterativoProximo(
         if (objeto.item && objeto.podePegar === false) continue;
         if (!objeto.interativo && !objeto.item) continue;
 
+        // Garante que o objeto está no mesmo andar do jogador (quando informado).
+        if (
+            jogador.andar &&
+            objeto.andar &&
+            objeto.andar !== jogador.andar
+        ) {
+            continue;
+        }
+
+        const objX = objeto.posicao?.x ?? objeto.x;
+        const objZ = objeto.posicao?.z ?? objeto.z;
+
         // Vetor do jogador até o objeto.
-        const dx = objeto.x - jogador.x;
-        const dz = objeto.z - jogador.z;
+        const dx = objX - jogador.x;
+        const dz = objZ - jogador.z;
 
         const distancia = Math.hypot(dx, dz);
 
