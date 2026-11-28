@@ -149,10 +149,7 @@ export const PREDIO_NC2A = {
                         maxZ: 11.8
                     }
                 },
-                {
-                    nome: 'Copa',
-                    categoria: 'copa'
-                }
+                // Copa é cadastrada pelo mapeamento geométrico acima.
             ]
         }
     ]
