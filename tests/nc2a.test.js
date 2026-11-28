@@ -176,6 +176,18 @@ test('cada folha do NC2A tem UVs e usa a textura da porta branca', async () => {
         assert.equal(malha.texturas.length, malha.posicoes.length * 2 / 3, malha.nomeObjeto);
         assert.equal(Math.min(...malha.texturas), 0, malha.nomeObjeto);
         assert.equal(Math.max(...malha.texturas), 1, malha.nomeObjeto);
+
+        const porta = jogo.portas.get(malha.nomeObjeto);
+        if (!porta.par) continue;
+        const eixoLargura = porta.x === porta.pivoX ? 2 : 0;
+        const dobradica = eixoLargura === 0 ? porta.pivoX : porta.pivoZ;
+        for (let i = 0; i < malha.posicoes.length / 3; i++) {
+            const faceLarga = Math.abs(malha.normais[i * 3 + 2 - eixoLargura]) > 0.9;
+            const naDobradica = Math.abs(malha.posicoes[i * 3 + eixoLargura] - dobradica) < EPSILON;
+            if (faceLarga && naDobradica) {
+                assert.equal(malha.texturas[i * 2 + 1], 0, malha.nomeObjeto);
+            }
+        }
     }
     assert.deepEqual(folhas, portas);
 });
