@@ -22,7 +22,9 @@ export const PREDIO_NC2A = {
                 },
                 {
                     nome: 'CAIS',
-                    categoria: 'laboratorio'
+                    categoria: 'laboratorio',
+                    area: { minX: 20.5, maxX: 44.5, minZ: -11.5, maxZ: -4.5 },
+                    porta: { nome: 'Andar00__Sala002__Int__Porta.003', x: 23.52, z: -4 }
                 },
                 {
                     nome: 'Sala002',
