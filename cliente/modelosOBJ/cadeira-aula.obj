@@ -1,6 +1,6 @@
 # Blender 5.3.0
 # www.blender.org
-mtllib cadeira-aula.mtl
+mtllib ../modelosMTL/cadeira-aula.mtl
 o Mesh_0.002
 v -0.781329 -0.190393 -0.228642
 v -0.781329 -0.188921 -0.225750

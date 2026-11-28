@@ -55,11 +55,15 @@ function aula() {
             escala: 0.5,
             solido: true
         },
-        ...[-1.35, 0.72].flatMap((dz, fila) =>
-            [-1.48, 1.48].flatMap((dx, lado) => [
-                mesa(`mesa_${fila}_${lado}`, dx, dz),
-                cadeira(`cadeira_${fila}_${lado}`, dx, dz + 0.82)
-            ])
+        ...[-1.88, -0.16, 1.56].flatMap((dz, fila) =>
+            [-1.38, 1.38].map((dx, lado) => ({
+                id: `cadeira_${fila}_${lado}`,
+                modelo: 'cadeira-aula-jogo.obj',
+                dx,
+                dz,
+                rotacaoY: Math.PI,
+                solido: true
+            }))
         )
     ];
 }

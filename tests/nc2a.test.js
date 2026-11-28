@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { leitorOBJ } from '../cliente/leitorOBJ.js';
+import { leitorMTL } from '../cliente/leitorMTL.js';
 import { obterObjetosMapa, PREDIO_NC2A } from '../compartilhado/mapa.js';
 import { Jogo } from '../servidor/jogo.js';
 import { carregarColisoesOBJ } from '../servidor/colisaoOBJ.js';
@@ -104,6 +107,75 @@ test('a mobília cabe nas salas e fica fora do giro das portas', async () => {
             }
         }
     }
+});
+
+async function lerModeloComMateriais(nome) {
+    const caminho = new URL(`../cliente/modelosOBJ/${nome}`, import.meta.url);
+    const modelo = leitorOBJ.parseOBJ(await readFile(caminho, 'utf8'));
+    const biblioteca = new URL(modelo.materialLibs[0], caminho);
+    const materiais = leitorMTL.parseMTL(await readFile(biblioteca, 'utf8'));
+    return { ...modelo, biblioteca, materiais };
+}
+
+test('as salas de aula usam cadeiras com apoio, pés no piso e textura UV', async () => {
+    const arquivo = 'cadeira-aula-jogo.obj';
+    const modelo = await lerModeloComMateriais(arquivo);
+    assert.equal(modelo.malhas.length, 1);
+    const [malha] = modelo.malhas;
+    assert.equal(malha.texturas.length, modelo.totalVertices * 2);
+    const material = modelo.materiais[malha.material];
+    assert.equal(material.diffuseMap, '../texturas/Image_0.001.jpg');
+    await readFile(new URL(material.diffuseMap, modelo.biblioteca));
+
+    for (const caixa of jogo.modelosColisao.get(arquivo).colisores) {
+        assert.equal(caixa.minimoY, 0);
+        assert.ok(Math.abs(caixa.minimoX + caixa.maximoX) < EPSILON);
+        assert.ok(Math.abs(caixa.minimoZ + caixa.maximoZ) < EPSILON);
+    }
+
+    const objetos = obterObjetosMapa();
+    for (const andar of PREDIO_NC2A.andares) {
+        for (const sala of andar.salas.filter(sala => sala.categoria === 'aula')) {
+            const assentos = objetos.filter(objeto =>
+                objeto.sala === sala.nome && objeto.andar === andar.nome && objeto.modelo === arquivo
+            );
+            assert.equal(assentos.length, 6, sala.nome);
+            for (const cadeira of assentos) {
+                assert.equal(cadeira.y, sala.ancora.y, cadeira.nome);
+                assert.equal(cadeira.rotacaoY, sala.ancora.rotacaoY + Math.PI, cadeira.nome);
+                assert.equal(cadeira.solido, true, cadeira.nome);
+            }
+        }
+    }
+});
+
+test('cada folha do NC2A tem UVs e usa a textura da porta branca', async () => {
+    const modelo = await lerModeloComMateriais('nc2a.obj');
+    const portas = new Set(jogo.portas.keys());
+    for (const sufixo of ['006', '007', '012', '013', '016', '019', '023', '025']) {
+        portas.add(`Andar00__Recepcao__Est__ParedeDireita.${sufixo}`);
+    }
+
+    const material = modelo.materiais.PortaBranca;
+    assert.equal(material.diffuseMap, '../texturas/porta_branca.jpg');
+    await readFile(new URL(material.diffuseMap, modelo.biblioteca));
+
+    const azulejo = modelo.materiais.AzulejoInterno;
+    assert.equal(azulejo.diffuseMap, '../texturas/parede_azulejo_branco.jpg');
+    await readFile(new URL(azulejo.diffuseMap, modelo.biblioteca));
+
+    const folhas = new Set();
+    for (const malha of modelo.malhas) {
+        const ehPorta = portas.has(malha.nomeObjeto);
+        assert.equal(malha.material === 'PortaBranca', ehPorta, malha.nomeObjeto);
+        if (!ehPorta) continue;
+
+        folhas.add(malha.nomeObjeto);
+        assert.equal(malha.texturas.length, malha.posicoes.length * 2 / 3, malha.nomeObjeto);
+        assert.equal(Math.min(...malha.texturas), 0, malha.nomeObjeto);
+        assert.equal(Math.max(...malha.texturas), 1, malha.nomeObjeto);
+    }
+    assert.deepEqual(folhas, portas);
 });
 
 test('o centro de cada entrada continua transitável com a porta aberta', () => {

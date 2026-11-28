@@ -8,7 +8,6 @@ const caminhosTexturas = {
   "ceiling-lamp.obj": "/texturas/ceiling-lamp_body_basecolor.jpg",
   "radio.obj": "/texturas/radio_textura.jpg",
   "lousa.obj": "/texturas/lousa_textura.jpg",
-  "cadeira-aula.obj": "/texturas/Image_0.001.jpg",
 };
 
 const ESCALA_V_RADIO = 15.9874773;
@@ -91,7 +90,7 @@ void main() {
     }
 
     vec3 corDifusa = uCor * corTextura;
-    vec3 corAmbiente = uCorAmbiente;
+    vec3 corAmbiente = uCorAmbiente * corTextura;
     vec3 corEspecular = uCorEspecular;
 
     if (uUsarMapaEspecular) {
