@@ -535,6 +535,9 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     carregarTexturasMateriais(gl, modelo);
   }
 
+  // Textura única para todas as partes do OBJ reconhecidas como portas.
+  const texturaPortaNC2A = carregarTextura(gl, '/texturas/porta_branca.jpg');
+
   const desenhadorPersonagem = personagemGLB
     ? criarDesenhadorGLB(gl, personagemGLB)
     : null;
@@ -634,8 +637,12 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
         for (const parte of partes) {
           const material = parte.material;
 
-          const texturaMaterial = material?.diffuseMap || textura;
-          const corMaterial = material?.diffuse || cor;
+          const ehPortaNC2A = objeto.modelo === 'nc2a.obj' &&
+            /__Int__Porta/.test(parte.nomeObjeto ?? '');
+          const texturaMaterial = ehPortaNC2A
+            ? texturaPortaNC2A : (material?.diffuseMap || textura);
+          const corMaterial = ehPortaNC2A
+            ? [1, 1, 1] : (material?.diffuse || cor);
 
           let matrizModeloParte = matrizModelo;
 
