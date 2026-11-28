@@ -4,6 +4,7 @@ import { STATUS_TASK } from '../../compartilhado/constantesTasks.js';
 export class TaskJogarLixo extends TaskBase {
   constructor(opcoes) {
     super({ ...opcoes, tipo: 'jogar_lixo' });
+    this.nomeItemLixo = opcoes.nomeItemLixo ?? 'blocoTeste01';
   }
 
   atualizar(tempoDecorrido, jogador) {
@@ -12,16 +13,17 @@ export class TaskJogarLixo extends TaskBase {
 
   descartarLixo(jogador) {
     if (this.status !== STATUS_TASK.EM_ANDAMENTO) {
-      console.log(`[Task ${this.id}] Jogador ${jogador.id} interagiu com a lixeira, mas a task está "${this.status}".`);
       return false;
     }
 
     if (this.jogadorId !== jogador.id) {
-      console.log(`[Task ${this.id}] Jogador ${jogador.id} tentou concluir a task, mas ela pertence ao Jogador ${this.jogadorId}.`);
       return false;
     }
 
-    console.log(`[Task ${this.id}] Jogador ${jogador.id} jogou o lixo na lixeira!`);
+    if (jogador.itemSegurado !== this.nomeItemLixo) {
+      return false;
+    }
+
     this.concluir();
     return true;
   }

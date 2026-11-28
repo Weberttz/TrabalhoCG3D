@@ -71,13 +71,13 @@ export const PREDIO_NC2A = {
                             interativo: true
                         },
                         {
-                            nome: 'blocoTeste01',
+                            nome: 'lixo01',
                             modelo: null,
                             dx: 1.6,
                             dy: 0.2,
                             dz: -0.5,
                             ehBloco: true,
-                            tamanho: 0.4,
+                            tamanho: 0.1,
                             cor: [0.9, 0.2, 0.2],
                             item: true,
                             podePegar: true,

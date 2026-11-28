@@ -246,28 +246,48 @@ export class Jogo {
             }
         }
 
+        const NOME_ITEM_LIXO = 'lixo01';
+
         const taskLixo = new TaskJogarLixo({
             id: 'task_lixo_sala002',
             jogadorId: null,
+            nomeItemLixo: NOME_ITEM_LIXO,
             x: 30.5,
             z: 10.6
         });
         this.tasks.set(taskLixo.id, taskLixo);
 
-        // 1. Interagir com a mesa atribui a task ao jogador (muda para EM_ANDAMENTO)
-        this.definirFuncaoInteracao(
-            'Sala002',
-            'mesaEscritorio01',
-            (objeto, jogador) => {
+        // 1. Pegar o lixo atribui a missão ao jogador; soltar no chão desassocia
+        this.configurarEventosItem('Sala002', NOME_ITEM_LIXO, {
+            aoPegar: (item, jogador) => {
                 if (taskLixo.status === 'pendente') {
                     taskLixo.atribuirPara(jogador);
                 }
+            },
+            aoSoltar: (item, jogador) => {
+                if (
+                    taskLixo.status === 'em_andamento' &&
+                    jogador &&
+                    taskLixo.jogadorId === jogador.id
+                ) {
+                    taskLixo.liberar();
+                }
             }
-        );
+        });
 
-        // 2. Interagir com a lixeira conclui a task (muda para CONCLUIDA)
-        this.definirFuncaoInteracao('Sala002', 'lixeira01', (objeto, jogador) => {
-            taskLixo.descartarLixo(jogador);
+        // 2. Interagir com a lixeira portando o lixo conclui a missão e solta o bloco dentro dela
+        this.definirFuncaoInteracao('Sala002', 'lixeira01', (lixeira, jogador) => {
+            if (taskLixo.descartarLixo(jogador)) {
+                this.soltarItemJogador(
+                    jogador.id,
+                    {
+                        x: lixeira.posicao.x,
+                        y: lixeira.posicao.y + 0.35,
+                        z: lixeira.posicao.z
+                    },
+                    false // podePegar = false: fica visível dentro da lixeira e não pode ser pego novamente
+                );
+            }
         });
 
         this.definirFuncaoInteracao(
@@ -289,15 +309,6 @@ export class Jogo {
                 );
             }
         );
-
-        this.configurarEventosItem('Sala002', 'blocoTeste01', {
-            aoPegar: (item, jogador) => {
-                console.log(`[Item] Jogador ${jogador.id} pegou "${item.nome}"`);
-            },
-            aoSoltar: (item, jogador) => {
-                console.log(`[Item] "${item.nome}" foi solto em (${item.posicao.x}, ${item.posicao.z})`);
-            }
-        });
 
         this.inicializado = true;
     }
@@ -541,6 +552,9 @@ export class Jogo {
         }
 
         console.log(`[Jogo] Jogador ${jogadorId} interagiu com "${objetoMaisProximo.nome}" (distância: ${menorDistancia.toFixed(2)}m)`);
+        if ('podePegar' in objetoMaisProximo && jogador.itemSegurado) {
+            return false;
+        }
         objetoMaisProximo.interagir(jogador);
         return true;
     }
