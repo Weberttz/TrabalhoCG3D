@@ -3,7 +3,13 @@ import { fileURLToPath } from 'node:url';
 import { TaskProximidade } from './tasks/TaskProximidade.js';
 import { carregarColisoesOBJ } from './colisaoOBJ.js';
 import { Predio } from '../compartilhado/estruturaPredio.js';
-import { MAPA, obterObjetosMapa, obterSalaEmPosicao } from '../compartilhado/mapa.js';
+import {
+    MAPA,
+    obterAlvosPorta,
+    obterObjetoInterativoProximo,
+    obterObjetosMapa,
+    obterSalaEmPosicao
+} from '../compartilhado/mapa.js';
 import { TaskJogarLixo } from './tasks/TaskJogarLixo.js';
 import { catalogarNC2A } from '../compartilhado/classificadorNC2A.js';
 
@@ -54,6 +60,7 @@ export class Jogo {
 
         this.tasks = new Map();
         this.portas = new Map();
+        this.paresPortas = new Map();
 
         this.predio = new Predio('NC2A');
 
@@ -555,106 +562,117 @@ export class Jogo {
             throw new Error('Estrutura nc2a não encontrada.');
         }
 
-        for (const caixa of estrutura.colisaoOBJ.colisores) {
-            if (!caixa.nome.includes('__Int__Porta')) {
-                continue;
+        const nomesPortas = new Set();
+        for (const andar of Object.values(this.catalogo.andares)) {
+            for (const sala of Object.values(andar.salas)) {
+                for (const nome of sala.portas) nomesPortas.add(nome);
             }
+        }
+
+        const { x: origemX, y: origemY, z: origemZ } = estrutura.posicao;
+        for (const caixa of estrutura.colisaoOBJ.colisores) {
+            if (!nomesPortas.has(caixa.nome)) continue;
 
             const centroX = (caixa.minimoX + caixa.maximoX) / 2;
             const centroY = (caixa.minimoY + caixa.maximoY) / 2;
             const centroZ = (caixa.minimoZ + caixa.maximoZ) / 2;
-
             const larguraX = caixa.maximoX - caixa.minimoX;
             const larguraZ = caixa.maximoZ - caixa.minimoZ;
-
-            // Descobre em qual eixo a porta possui maior largura.
             const portaNoEixoX = larguraX >= larguraZ;
 
-            // Pivô na borda da porta, não no centro.
-            const pivoX = portaNoEixoX
-                ? caixa.minimoX
-                : centroX;
-
-            const pivoZ = portaNoEixoX
-                ? centroZ
-                : caixa.minimoZ;
-
-            // Sentido inicial de abertura.
-            // Pode ser ajustado individualmente depois.
-            const sentido = portaNoEixoX
+            // As folhas de cada par usam as bordas opostas do vão.
+            const sufixoFolha = caixa.nome.match(/__(Min|Max)$/);
+            const par = sufixoFolha ? caixa.nome.slice(0, sufixoFolha.index) : null;
+            const naBordaMaxima = sufixoFolha?.[1] === 'Max';
+            const borda = naBordaMaxima ? 'maximo' : 'minimo';
+            const pivoX = portaNoEixoX ? caixa[`${borda}X`] : centroX;
+            const pivoZ = portaNoEixoX ? centroZ : caixa[`${borda}Z`];
+            const sentidoBase = portaNoEixoX
                 ? (centroZ >= 0 ? -1 : 1)
                 : (centroX >= 0 ? 1 : -1);
+            const sentido = naBordaMaxima ? -sentidoBase : sentidoBase;
 
-            this.portas.set(caixa.nome, {
+            const porta = {
                 nome: caixa.nome,
-
-                // Posição global para interação.
-                x: centroX + estrutura.posicao.x,
-                y: centroY + estrutura.posicao.y,
-                z: centroZ + estrutura.posicao.z,
-
-                // Pivô local do arquivo OBJ.
+                par,
+                x: centroX + origemX,
+                y: centroY + origemY,
+                z: centroZ + origemZ,
                 pivoX,
                 pivoZ,
-
                 sentido,
+                centroAberto: {
+                    x: origemX + pivoX + sentido * (centroZ - pivoZ),
+                    z: origemZ + pivoZ - sentido * (centroX - pivoX)
+                },
                 aberta: false,
                 ultimaInteracaoEm: 0
-            });
+            };
+
+            this.portas.set(porta.nome, porta);
+            if (par) {
+                const folhas = this.paresPortas.get(par) ?? [];
+                folhas.push(porta);
+                this.paresPortas.set(par, folhas);
+            }
         }
 
-        console.log(
-            `[PORTAS] ${this.portas.size} portas encontradas.`
-        );
+        for (const [folha, outraFolha] of this.paresPortas.values()) {
+            if (!outraFolha) continue;
+            const centroPar = {
+                x: (folha.x + outraFolha.x) / 2,
+                z: (folha.z + outraFolha.z) / 2
+            };
+            folha.centroPar = centroPar;
+            outraFolha.centroPar = centroPar;
+        }
+
+        console.log(`[PORTAS] ${this.portas.size} portas encontradas.`);
     }
 
     alternarPorta(jogadorId, nomePorta) {
         const jogador = this.jogadores.get(jogadorId);
         const porta = this.portas.get(nomePorta);
-
         if (!jogador || !porta) return false;
 
-        const dx = porta.x - jogador.x;
-        const dz = porta.z - jogador.z;
-        const distancia = Math.hypot(dx, dz);
-
-        if (distancia > 2) return false;
-
-        // Impede interação entre andares diferentes.
-        const alturaOlhos = (jogador.y ?? 0) + 1.25;
-
-        if (Math.abs(alturaOlhos - porta.y) > 1.75) {
+        // O cliente usa os mesmos alvos no indicador de interação.
+        const direcaoOlhar = {
+            x: Math.sin(jogador.anguloHorizontal),
+            z: -Math.cos(jogador.anguloHorizontal)
+        };
+        const alvos = obterAlvosPorta(porta, jogador);
+        if (!obterObjetoInterativoProximo(jogador, alvos, direcaoOlhar)) {
             return false;
-        }
-
-        // Valida se o jogador olha para a porta.
-        if (distancia > 0.000001) {
-            const direcaoX = Math.sin(jogador.anguloHorizontal);
-            const direcaoZ = -Math.cos(jogador.anguloHorizontal);
-
-            const alinhamento =
-                (direcaoX * dx + direcaoZ * dz) / distancia;
-
-            if (alinhamento < Math.cos(35 * Math.PI / 180)) {
-                return false;
-            }
         }
 
         const agora = Date.now();
+        if (agora - porta.ultimaInteracaoEm < 350) return false;
 
-        // Evita abrir/fechar repetidamente muito rápido.
-        if (agora - porta.ultimaInteracaoEm < 350) {
-            return false;
+        const folhas = this.paresPortas.get(porta.par) ?? [porta];
+        const aberta = !porta.aberta;
+        const novoEstado = new Map(this.portas);
+        for (const folha of folhas) {
+            novoEstado.set(folha.nome, { ...folha, aberta });
         }
 
-        porta.ultimaInteracaoEm = agora;
-        porta.aberta = !porta.aberta;
+        // As duas folhas mudam juntas. Nenhuma delas pode prender um jogador.
+        const estrutura = this.andar.salas.nc2a.objetos.nc2a_estrutura;
+        for (const ocupante of this.jogadores.values()) {
+            const colisor = estrutura.colisaoOBJ.detectarColisao(
+                ocupante.x - estrutura.posicao.x,
+                ocupante.y - estrutura.posicao.y,
+                ocupante.z - estrutura.posicao.z,
+                novoEstado
+            );
+            if (folhas.some(folha => folha.nome === colisor?.nome)) return false;
+        }
 
-        console.log(
-            `[PORTA] ${porta.nome}:`,
-            porta.aberta ? 'Aberta' : 'Fechada'
-        );
+        for (const folha of folhas) {
+            folha.ultimaInteracaoEm = agora;
+            folha.aberta = aberta;
+        }
 
+        console.log(`[PORTA] ${porta.par ?? porta.nome}:`, aberta ? 'Aberta' : 'Fechada');
         return true;
     }
 
@@ -1066,6 +1084,8 @@ export class Jogo {
                 pivoX: porta.pivoX,
                 pivoZ: porta.pivoZ,
                 sentido: porta.sentido,
+                centroPar: porta.centroPar,
+                centroAberto: porta.centroAberto,
                 aberta: porta.aberta
             })),
         };

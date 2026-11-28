@@ -281,6 +281,23 @@ export const COLISORES_QUARTO =
     obterObjetosMapa().filter(objeto => objeto.solido);
 
 
+export function obterAlvosPorta(porta, jogador) {
+    if (!jogador || Math.abs((jogador.y ?? 0) + 1.25 - porta.y) > 1.75) return [];
+
+    const alvo = { ...porta, porta: true, interativo: true };
+    const alvos = [alvo];
+
+    if (porta.centroPar) {
+        alvos.push({ ...alvo, ...porta.centroPar });
+    }
+
+    if (porta.aberta) {
+        alvos.push({ ...alvo, ...porta.centroAberto });
+    }
+
+    return alvos;
+}
+
 // Retorna o objeto próximo ao jogador, se ele estiver olhando
 export function obterObjetoInterativoProximo(
     jogador,

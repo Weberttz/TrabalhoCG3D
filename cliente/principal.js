@@ -1,4 +1,8 @@
-import { obterObjetosMapa, obterObjetoInterativoProximo } from "./mapa.js";
+import {
+  obterAlvosPorta,
+  obterObjetosMapa,
+  obterObjetoInterativoProximo,
+} from "./mapa.js";
 import { lerTeclas, configurarInteracao, configurarDrop } from "./teclado.js";
 import { enviarTeclas, enviarInteracao, obterSessao, enviarTrocaRadio, enviarDrop, enviarInteracaoPorta } from "./rede.js";
 import { criarRenderizador } from './renderizador.js';
@@ -255,15 +259,7 @@ async function iniciarJogo() {
       }));
 
       const portasInterativas = (estado?.portas ?? [])
-        .filter(porta => {
-          const alturaOlhos = (meuJogador?.y ?? 0) + 1.25;
-          return Math.abs(alturaOlhos - porta.y) <= 1.75;
-        })
-        .map(porta => ({
-          ...porta,
-          porta: true,
-          interativo: true
-        }));
+        .flatMap(porta => obterAlvosPorta(porta, meuJogador));
 
       const objetoProximo = meuJogador
         ? obterObjetoInterativoProximo(

@@ -3,7 +3,12 @@ import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { leitorOBJ } from '../cliente/leitorOBJ.js';
 import { leitorMTL } from '../cliente/leitorMTL.js';
-import { obterObjetosMapa, PREDIO_NC2A } from '../compartilhado/mapa.js';
+import {
+    obterAlvosPorta,
+    obterObjetoInterativoProximo,
+    obterObjetosMapa,
+    PREDIO_NC2A
+} from '../compartilhado/mapa.js';
 import { Jogo } from '../servidor/jogo.js';
 import { carregarColisoesOBJ } from '../servidor/colisaoOBJ.js';
 
@@ -152,9 +157,6 @@ test('as salas de aula usam cadeiras com apoio, pés no piso e textura UV', asyn
 test('cada folha do NC2A tem UVs e usa a textura da porta branca', async () => {
     const modelo = await lerModeloComMateriais('nc2a.obj');
     const portas = new Set(jogo.portas.keys());
-    for (const sufixo of ['006', '007', '012', '013', '016', '019', '023', '025']) {
-        portas.add(`Andar00__Recepcao__Est__ParedeDireita.${sufixo}`);
-    }
 
     const material = modelo.materiais.PortaBranca;
     assert.equal(material.diffuseMap, '../texturas/porta_branca.jpg');
@@ -178,26 +180,101 @@ test('cada folha do NC2A tem UVs e usa a textura da porta branca', async () => {
     assert.deepEqual(folhas, portas);
 });
 
-test('o centro de cada entrada continua transitável com a porta aberta', () => {
+test('o centro de cada folha continua transitável com a porta aberta', () => {
+    const caixas = jogo.modelosColisao.get('nc2a.obj').colisores;
     for (const porta of jogo.portas.values()) {
-        if (!porta.nome.includes('__Int__Porta')) continue;
-        if (porta.nome.includes('__Corredor__')) continue;
-
-        const lado = Math.sign(porta.z);
+        const caixa = caixas.find(caixa => caixa.nome === porta.nome);
+        const perpendicularEmZ = caixa.maximoX - caixa.minimoX >= caixa.maximoZ - caixa.minimoZ;
+        const eixo = perpendicularEmZ ? 'z' : 'x';
+        const lado = Math.sign(porta[eixo]);
         const jogador = {
             id: -1,
             x: porta.x,
-            y: porta.nome.startsWith('Andar01') ? 4 : 0,
-            z: porta.z - lado * 1.25
+            y: porta.nome.startsWith('Andar01') ? 4.01 : 0,
+            z: porta.z
         };
+        jogador[eixo] -= lado * 1.25;
 
+        assert.equal(jogo.podeOcupar(jogador, porta.x, porta.z), false, porta.nome);
         porta.aberta = true;
         try {
             assert.ok(jogo.podeOcupar(jogador, jogador.x, jogador.z), porta.nome);
-            jogo.movimentarComColisao(jogador, 0, lado * 3.5);
-            assert.ok(Math.abs(jogador.z - porta.z - lado * 2.25) < EPSILON, porta.nome);
+            const passo = lado * 3.5;
+            jogo.movimentarComColisao(jogador, perpendicularEmZ ? 0 : passo, perpendicularEmZ ? passo : 0);
+            assert.ok(Math.abs(jogador[eixo] - porta[eixo] - lado * 2.25) < EPSILON, porta.nome);
         } finally {
             porta.aberta = false;
+        }
+    }
+});
+
+test('a interação no centro abre as portas duplas e conecta os setores do térreo', () => {
+    const jogador = jogo.adicionarJogador(null);
+    const outro = jogo.adicionarJogador(null);
+    assert.ok(jogador && outro);
+
+    function caminhar(x, z) {
+        jogo.movimentarComColisao(jogador, x - jogador.x, z - jogador.z);
+        assert.ok(Math.hypot(jogador.x - x, jogador.z - z) < EPSILON, `Destino (${x}, ${z})`);
+    }
+
+    function mirarEInteragir(grupo, angulo) {
+        const alvos = jogo.criarEstado().portas
+            .filter(porta => porta.nome.startsWith(`${grupo}__`))
+            .flatMap(porta => obterAlvosPorta(porta, jogador));
+        assert.ok(alvos.length > 0, grupo);
+        jogador.anguloHorizontal = angulo;
+        const olhar = { x: Math.sin(angulo), z: -Math.cos(angulo) };
+        const alvo = obterObjetoInterativoProximo(jogador, alvos, olhar);
+        assert.ok(alvo, grupo);
+        return jogo.alternarPorta(jogador.id, alvo.nome);
+    }
+
+    const leste = 'Andar00__Corredor__Int__PortaLeste';
+    const oeste = 'Andar00__Corredor__Int__PortaOeste';
+    const recepcao = 'Andar00__Recepcao__Int__PortaCorredor';
+    const exterior = 'Andar00__Recepcao__Int__PortaExterior';
+
+    try {
+        caminhar(jogador.x, 0);
+        caminhar(8.5, 0);
+        assert.ok(mirarEInteragir(leste, -Math.PI / 2));
+        assert.ok(jogo.paresPortas.get(leste).every(folha => folha.aberta));
+
+        // Com outro jogador no vão, o fechamento deve aguardar.
+        jogo.movimentarComColisao(outro, 0, 1 - outro.z);
+        jogo.movimentarComColisao(outro, 7 - outro.x, 0);
+        assert.ok(Math.abs(outro.x - 7) < EPSILON);
+        for (const folha of jogo.paresPortas.get(leste)) folha.ultimaInteracaoEm = 0;
+        assert.equal(mirarEInteragir(leste, -Math.PI / 2), false);
+        assert.ok(jogo.paresPortas.get(leste).every(folha => folha.aberta));
+        jogo.removerJogador(outro.id);
+
+        caminhar(3, 0);
+        caminhar(3, 2.5);
+        assert.ok(mirarEInteragir(recepcao, Math.PI));
+        caminhar(3, 10.5);
+        jogo.atualizar(0);
+        assert.equal(jogador.sala, 'Recepcao');
+        assert.ok(mirarEInteragir(exterior, Math.PI));
+        caminhar(3, 13.5);
+        caminhar(3, 0);
+
+        caminhar(-8.5, 0);
+        assert.ok(mirarEInteragir(oeste, -Math.PI / 2));
+        caminhar(-23.5, 0);
+        caminhar(-23.5, 2.5);
+        jogador.anguloHorizontal = Math.PI;
+        assert.ok(jogo.alternarPorta(jogador.id, 'Andar00__Sala002__Int__Porta.013'));
+        caminhar(-23.5, 6.25);
+        jogo.atualizar(0);
+        assert.equal(jogador.sala, 'Sala002.013');
+    } finally {
+        jogo.removerJogador(jogador.id);
+        jogo.removerJogador(outro.id);
+        for (const porta of jogo.portas.values()) {
+            porta.aberta = false;
+            porta.ultimaInteracaoEm = 0;
         }
     }
 });
