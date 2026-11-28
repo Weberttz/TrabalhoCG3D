@@ -5,8 +5,70 @@ export const leitorMTL = {
     let material = null;
 
     function parseMapArgs(argumentos) {
-      return argumentos.trim();
+      const partes = argumentos.trim().split(/\s+/);
+
+      const escala = [1, 1];
+      const deslocamento = [0, 0];
+
+      let indice = 0;
+      let possuiTransformacao = false;
+
+      while (indice < partes.length) {
+        const opcao = partes[indice];
+
+        if (opcao !== '-o' && opcao !== '-s') {
+          break;
+        }
+
+        indice++;
+
+        const valores = [];
+
+        // O formato MTL aceita até 3 valores por opção.
+        while (
+          indice < partes.length &&
+          valores.length < 3 &&
+          Number.isFinite(Number(partes[indice]))
+        ) {
+          valores.push(Number(partes[indice]));
+          indice++;
+        }
+
+        if (valores.length === 0) {
+          throw new Error(
+            `Parâmetro inválido em map_Kd: ${argumentos}`
+          );
+        }
+
+        if (opcao === '-o') {
+          deslocamento[0] = valores[0];
+          deslocamento[1] = valores[1] ?? 0;
+        }
+
+        if (opcao === '-s') {
+          escala[0] = valores[0];
+          escala[1] = valores[1] ?? 1;
+        }
+
+        possuiTransformacao = true;
+      }
+
+      const arquivo = partes.slice(indice).join(' ');
+
+      if (!arquivo) {
+        throw new Error(
+          `Nome de textura ausente: ${argumentos}`
+        );
+      }
+
+      return {
+        arquivo,
+        uvTransform: possuiTransformacao
+          ? { escala, deslocamento }
+          : null
+      };
     }
+
     //funcoes p/ interpretar cada keyword do mtl
     const keywords = {
       newmtl(partes, argumentos) {
@@ -15,6 +77,7 @@ export const leitorMTL = {
         material = {
           diffuse: [1, 1, 1],
           diffuseMap: null,
+          uvTransform: null,
           normalMap: null,
           ambient: [0, 0, 0],
           specular: [1, 1, 1],
@@ -46,21 +109,27 @@ export const leitorMTL = {
       },
 
       map_Kd(partes, argumentos) {
-        material.diffuseMap = parseMapArgs(argumentos);
+        const resultado = parseMapArgs(argumentos);
+
+        material.diffuseMap = resultado.arquivo;
+        material.uvTransform = resultado.uvTransform;
       },
 
       map_Ns(partes, argumentos) {
-        material.specularMap = parseMapArgs(argumentos);
+        const resultado = parseMapArgs(argumentos);
+        material.specularMap = resultado.arquivo;
       },
 
       map_Bump(partes, argumentos) {
-        material.normalMap = parseMapArgs(argumentos);
+        const resultado = parseMapArgs(argumentos);
+        material.normalMap = resultado.arquivo;
       },
 
       bump(partes, argumentos) {
-        material.normalMap = parseMapArgs(argumentos);
+        const resultado = parseMapArgs(argumentos);
+        material.normalMap = resultado.arquivo;
       },
-
+  
       Ni(partes) {
         material.opticalDensity = Number(partes[0]);
       },

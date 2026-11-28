@@ -24,7 +24,10 @@ async function carregarModelos() {
     "office-chair.obj",
     "ceiling-lamp.obj",
     "computador2.obj",
-    "nc2a.obj"
+    "nc2a.obj",
+    "mesa-google.obj",
+    "pufe.obj",
+    "lousa.obj"
   ];
 
   const modelos = {};

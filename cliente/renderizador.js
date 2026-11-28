@@ -7,6 +7,7 @@ const caminhosTexturas = {
   "office-chair.obj": "/texturas/office-chair_body_basecolor.jpg",
   "ceiling-lamp.obj": "/texturas/ceiling-lamp_body_basecolor.jpg",
   "radio.obj": "/texturas/radio_textura.jpg",
+  "lousa.obj": "/texturas/lousa_textura.jpg",
 };
 
 const ESCALA_V_RADIO = 15.9874773;
@@ -427,24 +428,24 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     malha.desenhar(localAtributos);
   }
 
-  function carregarTextura(gl, caminhoTextura) {
+  function carregarTextura(gl, caminhoTextura, repetir = false) {
     const textura = gl.createTexture();
 
     gl.bindTexture(gl.TEXTURE_2D, textura);
 
-    const repetir = String(caminhoTextura)
-      .includes("radio_textura.jpg");
+    const usarRepeticao = repetir ||
+      String(caminhoTextura).includes("radio_textura.jpg");
 
     gl.texParameteri(
       gl.TEXTURE_2D,
       gl.TEXTURE_WRAP_S,
-      repetir ? gl.REPEAT : gl.CLAMP_TO_EDGE
+      usarRepeticao ? gl.REPEAT : gl.CLAMP_TO_EDGE
     );
 
     gl.texParameteri(
       gl.TEXTURE_2D,
       gl.TEXTURE_WRAP_T,
-      repetir ? gl.REPEAT : gl.CLAMP_TO_EDGE
+      usarRepeticao ? gl.REPEAT : gl.CLAMP_TO_EDGE
     );
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -477,21 +478,43 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
     if (!caminhoMTL) return;
 
     const cacheTexturas = {};
-    const materiais = Object.values(modelo.materiais ?? {});
+
+    const materiais = Object.values(
+      modelo.materiais ?? {}
+    );
 
     for (const material of materiais) {
-      for (const propriedade of ["diffuseMap", "specularMap"]) {
+      for (const propriedade of [
+        "diffuseMap",
+        "specularMap"
+      ]) {
         const arquivo = material[propriedade];
 
         if (!arquivo) continue;
 
-        let textura = cacheTexturas[arquivo];
+        // Repete a imagem quando o mapa difuso
+        // possui transformação UV própria.
+        const repetir =
+          propriedade === "diffuseMap" &&
+          material.uvTransform != null;
+
+        const chaveCache = `${arquivo}:${repetir}`;
+
+        let textura = cacheTexturas[chaveCache];
 
         if (!textura) {
-          const caminhoTextura = new URL(`../texturas/${arquivo}`, caminhoMTL);
+          const caminhoTextura = new URL(
+            `../texturas/${arquivo}`,
+            caminhoMTL
+          );
 
-          textura = carregarTextura(gl, caminhoTextura.href);
-          cacheTexturas[arquivo] = textura;
+          textura = carregarTextura(
+            gl,
+            caminhoTextura.href,
+            repetir
+          );
+
+          cacheTexturas[chaveCache] = textura;
         }
 
         material[propriedade] = textura;
@@ -651,6 +674,15 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             matrizModeloParte
           );
 
+          const transformacaoUV =
+            material?.uvTransform ??
+            (
+              objeto.modelo === 'radio.obj' ||
+                objeto.modelo === 'computador2.obj'
+                ? UV_RADIO
+                : null
+            );
+
           desenharMalha(
             parte.malha,
             matrizFinalParte,
@@ -658,9 +690,7 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             corMaterial,
             texturaMaterial,
             material,
-            objeto.modelo === 'radio.obj' || objeto.modelo === 'computador2.obj'
-              ? UV_RADIO
-              : null
+            transformacaoUV
           );
         }
       }
