@@ -1,80 +1,110 @@
+const mesa = (id, dx, dz) => ({
+    id, modelo: 'mesa.obj', dx, dz, solido: true
+});
+
+const cadeira = (id, dx, dz, rotacaoY = 0) => ({
+    id, modelo: 'cadeira.obj', dx, dz, rotacaoY, solido: true
+});
+
+function estacaoLaboratorio(id, dx) {
+    return [
+        mesa(`mesa_${id}`, dx, -2.8),
+        cadeira(`cadeira_${id}`, dx, -1.8),
+        {
+            id: `computador_${id}`,
+            modelo: 'computador.obj',
+            dx,
+            dy: 0.79,
+            dz: -2.82
+        }
+    ];
+}
+
+const escritorio = [
+    { id: 'mesa', modelo: 'office-desk.obj', solido: true },
+    {
+        id: 'cadeira',
+        modelo: 'office-chair.obj',
+        dz: 1.02,
+        rotacaoY: Math.PI,
+        solido: true
+    },
+    { id: 'computador', modelo: 'computador.obj', dy: 0.74, dz: -0.03 }
+];
+
+function pufe(id, dx, dz) {
+    // A origem do OBJ fica acima e ao lado do assento.
+    return {
+        id,
+        modelo: 'pufe.obj',
+        dx: dx + 0.5075,
+        dy: 0.997,
+        dz: dz + 0.5065,
+        solido: true
+    };
+}
+
+function aula() {
+    return [
+        {
+            id: 'lousa',
+            modelo: 'lousa.obj',
+            dx: -0.96,
+            dy: 1.42,
+            dz: -3.878,
+            escala: 0.5,
+            solido: true
+        },
+        ...[-1.35, 0.72].flatMap((dz, fila) =>
+            [-1.48, 1.48].flatMap((dx, lado) => [
+                mesa(`mesa_${fila}_${lado}`, dx, dz),
+                cadeira(`cadeira_${fila}_${lado}`, dx, dz + 0.82)
+            ])
+        )
+    ];
+}
+
+function laboratorio(sala) {
+    const largura = sala.area ? sala.area.maxX - sala.area.minX : 0;
+    const postos = largura >= 20
+        ? [-8.5, -2.9, 2.9, 8.5]
+        : largura >= 9 ? [-2.15, 2.15] : [0];
+
+    return postos.flatMap((dx, indice) => estacaoLaboratorio(indice + 1, dx));
+}
+
 const MOBILIARIO = {
-    laboratorio: [
+    laboratorio,
+    aula,
+    administrativo: () => escritorio,
+    recepcao: () => [
+        ...escritorio,
+        pufe('pufe_1', 0.05, -5.09),
+        pufe('pufe_2', -2.1, -5.09)
+    ],
+    copa: () => [
         {
             id: 'mesa',
-            modelo: 'office-desk.obj',
-            dx: 0,
-            dy: 0,
-            dz: 0,
+            modelo: 'mesa-google.obj',
+            dx: -0.18,
+            dy: 0.254,
+            dz: -0.18,
+            escala: 0.58,
             solido: true
         },
-        {
-            id: 'cadeira',
-            modelo: 'office-chair.obj',
-            dx: 0,
-            dy: 0,
-            dz: 0.7,
-            rotacaoY: Math.PI,
-            solido: true
-        },
-        {
-            id: 'computador',
-            modelo: 'computador2.obj',
-            dx: 0,
-            dy: 0.8,
-            dz: 0,
-            solido: false
-        },
-        {
-            id: 'lampada',
-            modelo: 'ceiling-lamp.obj',
-            dx: 2.6,
-            dy: 3,
-            dz: -0.5,
-            solido: false
-        }
-    ],
-
-    administrativo: [
-        {
-            id: 'mesa',
-            modelo: 'office-desk.obj',
-            dx: 0,
-            dy: 0,
-            dz: 0,
-            solido: true
-        },
-        {
-            id: 'cadeira',
-            modelo: 'office-chair.obj',
-            dx: 0,
-            dy: 0,
-            dz: 0.7,
-            rotacaoY: Math.PI,
-            solido: true
-        }
-    ],
-
-    recepcao: [],
-    copa: [],
-    banheiro: [],
-    circulacao: [],
-    generica: []
+        cadeira('cadeira_1', 0, 0.95),
+        cadeira('cadeira_2', 0, -0.95, Math.PI)
+    ]
 };
 
 export function gerarMobiliarioSala(sala, nomeAndar) {
     const ancora = sala.ancora;
+    if (!ancora) return [];
 
-    // Sem uma posição validada, não geramos móveis
-    // automaticamente para evitar atravessar paredes.
-    if (!ancora) {
-        return [];
-    }
-
+    const layout = sala.layout ?? sala.categoria;
     const modelos = sala.gerarMobiliario === false
         ? []
-        : (MOBILIARIO[sala.categoria] ?? []);
-
+        : (MOBILIARIO[layout]?.(sala) ?? []);
     const componentes = [
         ...modelos,
         ...(sala.objetos ?? [])
@@ -105,8 +135,8 @@ export function gerarMobiliarioSala(sala, nomeAndar) {
             y: ancora.y + dy,
             z: ancora.z - dx * s + dz * c,
 
-            rotacaoY:
-                angulo + (componente.rotacaoY ?? 0),
+            rotacaoY: angulo + (componente.rotacaoY ?? 0),
+            escala: componente.escala ?? 1,
 
             cor: componente.cor ?? [1, 1, 1],
 

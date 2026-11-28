@@ -1,0 +1,23 @@
+newmtl tecido_azul
+Ka 0.24 0.39 0.53
+Kd 0.23 0.39 0.54
+Ks 0.09 0.09 0.09
+Ns 12
+
+newmtl tecido_escuro
+Ka 0.19 0.28 0.35
+Kd 0.18 0.27 0.35
+Ks 0.07 0.07 0.07
+Ns 12
+
+newmtl metal_escuro
+Ka 0.21 0.24 0.27
+Kd 0.2 0.23 0.26
+Ks 0.35 0.35 0.35
+Ns 42
+
+newmtl plastico_cinza
+Ka 0.34 0.37 0.39
+Kd 0.33 0.35 0.37
+Ks 0.25 0.25 0.25
+Ns 27

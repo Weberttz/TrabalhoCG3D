@@ -254,16 +254,45 @@ function translacao(x, y, z) {
   ]);
 }
 
-function rotacaoY(angulo) {
-  const c = Math.cos(angulo);
-  const s = Math.sin(angulo);
+function rotacaoY(angulo, escala = 1) {
+  const c = Math.cos(angulo) * escala;
+  const s = Math.sin(angulo) * escala;
 
   return new Float32Array([
     c, 0, -s, 0,
-    0, 1, 0, 0,
+    0, escala, 0, 0,
     s, 0, c, 0,
     0, 0, 0, 1,
   ]);
+}
+
+function esferaModelo(posicoes) {
+  const minimo = [Infinity, Infinity, Infinity];
+  const maximo = [-Infinity, -Infinity, -Infinity];
+
+  for (let i = 0; i < posicoes.length; i += 3) {
+    for (let eixo = 0; eixo < 3; eixo++) {
+      const coordenada = posicoes[i + eixo];
+      minimo[eixo] = Math.min(minimo[eixo], coordenada);
+      maximo[eixo] = Math.max(maximo[eixo], coordenada);
+    }
+  }
+
+  return {
+    centro: minimo.map((valor, eixo) => (valor + maximo[eixo]) / 2),
+    raio: Math.hypot(...maximo.map((valor, eixo) => valor - minimo[eixo])) / 2
+  };
+}
+
+function planosCamera(matriz) {
+  return [0, 1, 2].flatMap(eixo => [-1, 1].map(sinal => {
+    const x = matriz[3] + sinal * matriz[eixo];
+    const y = matriz[7] + sinal * matriz[4 + eixo];
+    const z = matriz[11] + sinal * matriz[8 + eixo];
+    const d = matriz[15] + sinal * matriz[12 + eixo];
+    const comprimento = Math.hypot(x, y, z);
+    return [x / comprimento, y / comprimento, z / comprimento, d / comprimento];
+  }));
 }
 
 function verticesCubo() {
@@ -361,12 +390,39 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
   // carrega as texturas associadas manualmente aos .objs
   const texturasOBJ = {};
 
-  for (const chave in caminhosTexturas) {
-    texturasOBJ[chave] = carregarTextura(gl, caminhosTexturas[chave]);
+  for (const [modelo, caminho] of Object.entries(caminhosTexturas)) {
+    if (malhasOBJ[modelo]) texturasOBJ[modelo] = carregarTextura(gl, caminho);
   }
 
-  // malha e cores do quarto são importadas, não ficam espalhadas aqui.
-  const objetos = obterObjetosMapa();
+  const esferas = new Map(
+    Object.entries(modelos)
+      .filter(([nome]) => nome !== 'nc2a.obj')
+      .map(([nome, modelo]) => [nome, esferaModelo(modelo.posicoes)])
+  );
+
+  const objetos = obterObjetosMapa()
+    .filter(objeto => !objeto.item && malhasOBJ[objeto.modelo])
+    .map(objeto => {
+      const matrizModelo = multiplicar(
+        translacao(objeto.x, objeto.y, objeto.z),
+        rotacaoY(objeto.rotacaoY ?? 0, objeto.escala ?? 1)
+      );
+
+      const esfera = esferas.get(objeto.modelo);
+      if (!esfera) return { ...objeto, matrizModelo };
+
+      const [x, y, z] = esfera.centro;
+      return {
+        ...objeto,
+        matrizModelo,
+        centro: [
+          matrizModelo[0] * x + matrizModelo[8] * z + objeto.x,
+          matrizModelo[5] * y + objeto.y,
+          matrizModelo[2] * x + matrizModelo[10] * z + objeto.z
+        ],
+        raio: esfera.raio * (objeto.escala ?? 1)
+      };
+    });
 
   gl.useProgram(programa);
   gl.enable(gl.DEPTH_TEST);
@@ -613,18 +669,19 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
 
       const camera = multiplicar(projecao, olharPara(olho, alvo));
 
+      const planos = planosCamera(camera);
+
       for (const objeto of objetos) {
-        if (objeto.item) continue;
+        // Evita enviar malhas de mobília fora do campo de visão à GPU.
+        if (objeto.centro) {
+          const [x, y, z] = objeto.centro;
+          if (planos.some(([a, b, c, d]) => a * x + b * y + c * z + d < -objeto.raio)) {
+            continue;
+          }
+        }
 
         const partes = malhasOBJ[objeto.modelo];
-        if (!partes) continue;
-
-        const matrizTranslacao = translacao(objeto.x, objeto.y, objeto.z);
-
-        const matrizRotacao = rotacaoY(objeto.rotacaoY ?? 0);
-
-        const matrizModelo = multiplicar(matrizTranslacao, matrizRotacao);
-
+        const matrizModelo = objeto.matrizModelo;
         const matrizFinal = multiplicar(camera, matrizModelo);
 
         const textura = texturasOBJ[objeto.modelo] ?? null;
@@ -677,11 +734,9 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
             );
           }
 
-          // Cada porta recebe sua própria matriz.
-          const matrizFinalParte = multiplicar(
-            camera,
-            matrizModeloParte
-          );
+          const matrizFinalParte = porta
+            ? multiplicar(camera, matrizModeloParte)
+            : matrizFinal;
 
           const transformacaoUV =
             material?.uvTransform ??

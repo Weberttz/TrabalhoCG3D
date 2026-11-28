@@ -13,23 +13,9 @@ import { leitorMTL } from "./leitorMTL.js";
 // Carregamento dos modelos obj 
 
 async function carregarModelos() {
-  const nomesModelos = [
-    "sala001.obj",
-    "mesa.obj",
-    "lixeira.obj",
-    "cadeira.obj",
-    "radio.obj",
-    "personagem.obj",
-    "office-desk.obj",
-    "office-chair.obj",
-    "ceiling-lamp.obj",
-    "computador2.obj",
-    "nc2a.obj",
-    "mesa-google.obj",
-    "pufe.obj",
-    "lousa.obj",
-    "cadeira-aula.obj"
-  ];
+  const nomesModelos = new Set(
+    obterObjetosMapa().map(objeto => objeto.modelo).filter(Boolean)
+  );
 
   const modelos = {};
 

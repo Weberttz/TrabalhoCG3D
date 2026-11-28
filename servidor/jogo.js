@@ -187,6 +187,7 @@ export class Jogo {
             };
 
             objeto.rotacaoY = descricao.rotacaoY ?? 0;
+            objeto.escala = descricao.escala ?? 1;
 
             // Objetos sem colisão não precisam carregar
             // geometria de colisão.
@@ -380,7 +381,7 @@ export class Jogo {
                 id: taskId,
                 jogadorId: jogador.id,
 
-                x: cubo === 0 ? 28 : 31,
+                x: cubo === 0 ? 28 : 29.9,
                 z: 10,
 
                 tempoNecessario: 3
@@ -817,9 +818,16 @@ export class Jogo {
                 z: objetoZ
             } = objeto.posicao;
 
-            const xLocal = x - objetoX;
-            const yLocal = jogador.y - objetoY;
-            const zLocal = z - objetoZ;
+            const dx = x - objetoX;
+            const dz = z - objetoZ;
+            const c = Math.cos(objeto.rotacaoY);
+            const s = Math.sin(objeto.rotacaoY);
+            const escala = objeto.escala;
+
+            // Usa a inversa da transformação aplicada pelo renderizador.
+            const xLocal = (c * dx - s * dz) / escala;
+            const yLocal = (jogador.y - objetoY) / escala;
+            const zLocal = (s * dx + c * dz) / escala;
 
             const bloqueado =
                 objeto.colisaoOBJ.posicaoBloqueada(
@@ -829,9 +837,8 @@ export class Jogo {
 
                     // As portas continuam usando seus
                     // colisores dinâmicos.
-                    objeto.mesh === 'nc2a.obj'
-                        ? this.portas
-                        : null
+                    objeto.mesh === 'nc2a.obj' ? this.portas : null,
+                    escala
                 );
 
             if (bloqueado) {

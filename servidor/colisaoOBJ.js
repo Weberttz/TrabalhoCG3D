@@ -110,11 +110,15 @@ export async function carregarColisoesOBJ(caminho) {
         colisores.push(limites);
     }
 
-    function detectarColisao(x, y, z, portas = null) {
+    function detectarColisao(x, y, z, portas = null, escala = 1) {
+        const raio = RAIO_JOGADOR / escala;
+        const altura = ALTURA_JOGADOR / escala;
+        const margem = MARGEM / escala;
+
         for (const caixa of colisores) {
             const sobrepoeAltura =
-                y < caixa.maximoY - MARGEM &&
-                y + ALTURA_JOGADOR > caixa.minimoY + MARGEM;
+                y < caixa.maximoY - margem &&
+                y + altura > caixa.minimoY + margem;
 
             if (!sobrepoeAltura) continue;
 
@@ -153,7 +157,7 @@ export async function carregarColisoesOBJ(caminho) {
             if (
                 distanciaX * distanciaX +
                 distanciaZ * distanciaZ <
-                RAIO_JOGADOR * RAIO_JOGADOR
+                raio * raio
             ) {
                 return caixa;
             }
@@ -169,8 +173,8 @@ export async function carregarColisoesOBJ(caminho) {
         nomesObjetos: objetos.map(objeto => objeto.nome),
         detectarColisao,
 
-        posicaoBloqueada(x, y, z, portas = null) {
-            return detectarColisao(x, y, z, portas) !== null;
+        posicaoBloqueada(x, y, z, portas = null, escala = 1) {
+            return detectarColisao(x, y, z, portas, escala) !== null;
         }
     };
 }
