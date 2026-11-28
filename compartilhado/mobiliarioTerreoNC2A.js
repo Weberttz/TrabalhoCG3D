@@ -79,7 +79,7 @@ function mesaComPufes(id, x, z) {
 
 function salaAula(esquerda, xProfessor, zProfessor, colunas, fileiras, mesa = {}) {
     return [
-        movel('lousa', 'lousa-terreo.obj', esquerda + 0.14, zProfessor, QUARTO_DE_VOLTA, { dy: 1.02 }),
+        movel('lousa', 'lousa-terreo.obj', esquerda + 0.14, zProfessor, -QUARTO_DE_VOLTA, { dy: 1.02 }),
         movel('mesa_professor', 'mesa.obj', xProfessor, zProfessor, QUARTO_DE_VOLTA, mesa),
         movel('cadeira_professor', 'cadeira-aula-jogo.obj', xProfessor - 1, zProfessor, QUARTO_DE_VOLTA),
         ...fileiras.flatMap((z, fila) =>
