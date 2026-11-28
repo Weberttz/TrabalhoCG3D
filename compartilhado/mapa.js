@@ -1,4 +1,5 @@
 import { gerarMobiliarioSala } from './mobiliarioNC2A.js';
+import { SALAS_ADICIONAIS_NC2A } from './salasNC2A.js';
 
 export const PREDIO_NC2A = {
     nome: 'NC2A',
@@ -10,6 +11,7 @@ export const PREDIO_NC2A = {
             nivel: 0,
 
             salas: [
+                ...SALAS_ADICIONAIS_NC2A.filter(sala => sala.andar === 'Andar00'),
                 {
                     nome: 'Corredor',
                     categoria: 'circulacao'
@@ -94,6 +96,7 @@ export const PREDIO_NC2A = {
             nivel: 1,
 
             salas: [
+                ...SALAS_ADICIONAIS_NC2A.filter(sala => sala.andar === 'Andar01'),
                 {
                     nome: 'Corredor',
                     categoria: 'circulacao'
