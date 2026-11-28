@@ -1,195 +1,412 @@
 export const leitorMTL = {
-  //interpreta os dados do mtl e guarda os materiais
-  parseMTL(texto) {
-    const materiais = {};
-    let material = null;
 
-    function parseMapArgs(argumentos) {
-      const partes = argumentos.trim().split(/\s+/);
+    parseMapArgs(argumentos) {
+        const partes = argumentos.trim().split(/\s+/);
 
-      const escala = [1, 1];
-      const deslocamento = [0, 0];
+        const escala = [1, 1];
+        const deslocamento = [0, 0];
 
-      let indice = 0;
-      let possuiTransformacao = false;
+        let bumpMultiplier = 1;
+        let possuiTransformacao = false;
 
-      while (indice < partes.length) {
-        const opcao = partes[indice];
+        let indice = 0;
 
-        if (opcao !== '-o' && opcao !== '-s') {
-          break;
+        function lerNumeros(maximo) {
+            const valores = [];
+
+            while (
+                indice < partes.length &&
+                valores.length < maximo
+            ) {
+                const valor = Number(partes[indice]);
+
+                if (!Number.isFinite(valor)) {
+                    break;
+                }
+
+                valores.push(valor);
+                indice++;
+            }
+
+            return valores;
         }
 
-        indice++;
+        while (indice < partes.length) {
+            const opcao = partes[indice];
 
-        const valores = [];
+            // Deslocamento UV
+            if (opcao === '-o') {
+                indice++;
 
-        // O formato MTL aceita até 3 valores por opção.
-        while (
-          indice < partes.length &&
-          valores.length < 3 &&
-          Number.isFinite(Number(partes[indice]))
-        ) {
-          valores.push(Number(partes[indice]));
-          indice++;
+                const valores = lerNumeros(3);
+
+                if (valores.length === 0) {
+                    throw new Error(
+                        `Deslocamento UV inválido: ${argumentos}`
+                    );
+                }
+
+                deslocamento[0] = valores[0];
+                deslocamento[1] = valores[1] ?? 0;
+
+                possuiTransformacao = true;
+                continue;
+            }
+
+            // Escala UV
+            if (opcao === '-s') {
+                indice++;
+
+                const valores = lerNumeros(3);
+
+                if (valores.length === 0) {
+                    throw new Error(
+                        `Escala UV inválida: ${argumentos}`
+                    );
+                }
+
+                escala[0] = valores[0];
+                escala[1] = valores[1] ?? 1;
+
+                possuiTransformacao = true;
+                continue;
+            }
+
+            // Intensidade do bump mapping
+            if (opcao === '-bm') {
+                indice++;
+
+                const valores = lerNumeros(1);
+
+                if (valores.length !== 1) {
+                    throw new Error(
+                        `Intensidade de bump inválida: ${argumentos}`
+                    );
+                }
+
+                bumpMultiplier = valores[0];
+                continue;
+            }
+
+            // Nenhuma outra opção reconhecida:
+            // o restante é interpretado como arquivo.
+            break;
         }
 
-        if (valores.length === 0) {
-          throw new Error(
-            `Parâmetro inválido em map_Kd: ${argumentos}`
-          );
+        const arquivo = partes.slice(indice).join(' ');
+
+        if (!arquivo) {
+            throw new Error(
+                `Arquivo de textura não informado: ${argumentos}`
+            );
         }
 
-        if (opcao === '-o') {
-          deslocamento[0] = valores[0];
-          deslocamento[1] = valores[1] ?? 0;
-        }
-
-        if (opcao === '-s') {
-          escala[0] = valores[0];
-          escala[1] = valores[1] ?? 1;
-        }
-
-        possuiTransformacao = true;
-      }
-
-      const arquivo = partes.slice(indice).join(' ');
-
-      if (!arquivo) {
-        throw new Error(
-          `Nome de textura ausente: ${argumentos}`
-        );
-      }
-
-      return {
-        arquivo,
-        uvTransform: possuiTransformacao
-          ? { escala, deslocamento }
-          : null
-      };
-    }
-
-    //funcoes p/ interpretar cada keyword do mtl
-    const keywords = {
-      newmtl(partes, argumentos) {
-        const nome = argumentos;
-
-        material = {
-          diffuse: [1, 1, 1],
-          diffuseMap: null,
-          uvTransform: null,
-          normalMap: null,
-          ambient: [0, 0, 0],
-          specular: [1, 1, 1],
-          specularMap: null,
-          shininess: 400,
-          opacity: 1,
-        };
-        materiais[nome] = material;
-      },
-
-      Ns(partes) {
-        material.shininess = Number(partes[0]);
-      },
-
-      Ka(partes) {
-        material.ambient = partes.slice(0, 3).map(Number);
-      },
-
-      Kd(partes) {
-        material.diffuse = partes.slice(0, 3).map(Number);
-      },
-
-      Ks(partes) {
-        material.specular = partes.slice(0, 3).map(Number);
-      },
-
-      Ke(partes) {
-        material.emissive = partes.slice(0, 3).map(Number);
-      },
-
-      map_Kd(partes, argumentos) {
-        const resultado = parseMapArgs(argumentos);
-
-        material.diffuseMap = resultado.arquivo;
-        material.uvTransform = resultado.uvTransform;
-      },
-
-      map_Ns(partes, argumentos) {
-        const resultado = parseMapArgs(argumentos);
-        material.specularMap = resultado.arquivo;
-      },
-
-      map_Bump(partes, argumentos) {
-        const resultado = parseMapArgs(argumentos);
-        material.normalMap = resultado.arquivo;
-      },
-
-      bump(partes, argumentos) {
-        const resultado = parseMapArgs(argumentos);
-        material.normalMap = resultado.arquivo;
-      },
-  
-      Ni(partes) {
-        material.opticalDensity = Number(partes[0]);
-      },
-
-      d(partes) {
-        material.opacity = Number(partes[0]);
-      },
-
-      illum(partes) {
-        material.illum = Number.parseInt(partes[0], 10);
-      },
-    };
-
-    const linhas = texto.split("\n");
-
-    for (const linhaTexto of linhas) {
-      const linha = linhaTexto.trim();
-
-      if (!linha || linha.startsWith("#")) continue;
-
-      const partes = linha.split(/\s+/);
-      const comando = partes[0];
-      const argumentos = partes.slice(1).join(" ");
-
-      const handler = keywords[comando];
-
-      if (handler && (comando === "newmtl" || material)) {
-        handler(partes.slice(1), argumentos);
-      }
-    }
-
-    return materiais;
-  },
-
-  async carregarMateriais(obj) {
-    const baseHref = new URL(obj.caminho, window.location.href);
-
-    const arquivosMTL = await Promise.all(
-      obj.materialLibs.map(async (nomeArquivo) => {
-        const caminhoMTL = new URL(`../modelosMTL/${nomeArquivo}`, baseHref);
-        const resposta = await fetch(caminhoMTL);
-        if (!resposta.ok) {
-          console.warn(`Arquivo .mtl não encontrado: ${nomeArquivo}`);
-          return null;
-        }
         return {
-          texto: await resposta.text(),
-          caminho: caminhoMTL,
+            arquivo,
+
+            uvTransform: possuiTransformacao
+                ? {
+                    escala,
+                    deslocamento
+                }
+                : null,
+
+            bumpMultiplier
         };
-      }),
-    );
+    },
 
-    const arquivosValidos = arquivosMTL.filter(Boolean);
-    const materiais = this.parseMTL(
-      arquivosValidos.map((arquivo) => arquivo.texto).join("\n"),
-    );
+    // Interpreta o conteúdo de um arquivo MTL.
+    parseMTL(texto) {
+        const materiais = {};
 
-    return {
-      materiais,
-      caminhosMTL: arquivosValidos.map((arquivo) => arquivo.caminho),
-    };
-  },
+        let material = null;
+
+        const keywords = {
+
+            // Criação de um novo material.
+            newmtl(partes, argumentos) {
+                const nome = argumentos.trim();
+
+                if (!nome) {
+                    throw new Error(
+                        'Material MTL sem nome.'
+                    );
+                }
+
+                material = {
+                    nome,
+
+                    // Cores
+                    diffuse: [1, 1, 1],
+                    ambient: [0, 0, 0],
+                    specular: [1, 1, 1],
+                    emissive: [0, 0, 0],
+
+                    // Mapas de textura
+                    diffuseMap: null,
+                    specularMap: null,
+                    emissiveMap: null,
+                    normalMap: null,
+
+                    // Transformações de textura
+                    uvTransform: null,
+
+                    emissiveUVTransform: null,
+                    specularUVTransform: null,
+                    normalUVTransform: null,
+
+                    // Configurações de bump
+                    bumpMultiplier: 1,
+
+                    // Propriedades do material
+                    shininess: 400,
+                    opacity: 1,
+                    opticalDensity: 1,
+                    illum: 2
+                };
+
+                materiais[nome] = material;
+            },
+
+            // Brilho do material.
+            Ns(partes) {
+                material.shininess = Number(partes[0]);
+            },
+
+            // Cor ambiente.
+            Ka(partes) {
+                material.ambient = partes
+                    .slice(0, 3)
+                    .map(Number);
+            },
+
+            // Cor difusa.
+            Kd(partes) {
+                material.diffuse = partes
+                    .slice(0, 3)
+                    .map(Number);
+            },
+
+            // Cor especular.
+            Ks(partes) {
+                material.specular = partes
+                    .slice(0, 3)
+                    .map(Number);
+            },
+
+            // Cor emissiva.
+            Ke(partes) {
+                material.emissive = partes
+                    .slice(0, 3)
+                    .map(Number);
+            },
+
+            // Textura difusa.
+            map_Kd(partes, argumentos) {
+                const resultado =
+                    leitorMTL.parseMapArgs(argumentos);
+
+                material.diffuseMap = resultado.arquivo;
+
+                material.uvTransform =
+                    resultado.uvTransform;
+            },
+
+            // Textura especular.
+            map_Ns(partes, argumentos) {
+                const resultado =
+                    leitorMTL.parseMapArgs(argumentos);
+
+                material.specularMap = resultado.arquivo;
+
+                material.specularUVTransform =
+                    resultado.uvTransform;
+            },
+
+            // Textura emissiva.
+            map_Ke(partes, argumentos) {
+                const resultado =
+                    leitorMTL.parseMapArgs(argumentos);
+
+                material.emissiveMap = resultado.arquivo;
+
+                material.emissiveUVTransform =
+                    resultado.uvTransform;
+            },
+
+            // Mapa de bump.
+            map_Bump(partes, argumentos) {
+                const resultado =
+                    leitorMTL.parseMapArgs(argumentos);
+
+                material.normalMap = resultado.arquivo;
+
+                material.normalUVTransform =
+                    resultado.uvTransform;
+
+                material.bumpMultiplier =
+                    resultado.bumpMultiplier;
+            },
+
+            // Variante da declaração de bump.
+            bump(partes, argumentos) {
+                const resultado =
+                    leitorMTL.parseMapArgs(argumentos);
+
+                material.normalMap = resultado.arquivo;
+
+                material.normalUVTransform =
+                    resultado.uvTransform;
+
+                material.bumpMultiplier =
+                    resultado.bumpMultiplier;
+            },
+
+            // Índice de refração.
+            Ni(partes) {
+                material.opticalDensity =
+                    Number(partes[0]);
+            },
+
+            // Opacidade.
+            d(partes) {
+                material.opacity = Number(partes[0]);
+            },
+
+            // Transparência inversa.
+            Tr(partes) {
+                material.opacity =
+                    1 - Number(partes[0]);
+            },
+
+            // Modelo de iluminação.
+            illum(partes) {
+                material.illum =
+                    Number.parseInt(partes[0], 10);
+            }
+        };
+
+        const linhas = texto.split(/\r?\n/);
+
+        for (let i = 0; i < linhas.length; i++) {
+            const linha = linhas[i].trim();
+
+            if (
+                !linha ||
+                linha.startsWith('#')
+            ) {
+                continue;
+            }
+
+            const partes = linha.split(/\s+/);
+
+            const comando = partes[0];
+
+            const argumentos = partes
+                .slice(1)
+                .join(' ');
+
+            const handler = keywords[comando];
+
+            // Ignora comandos não reconhecidos.
+            if (!handler) {
+                continue;
+            }
+
+            // Permite criar material, mas exige um
+            // material existente para demais comandos.
+            if (
+                comando !== 'newmtl' &&
+                !material
+            ) {
+                console.warn(
+                    `[MTL] Comando ${comando} sem material, linha ${i + 1}`
+                );
+
+                continue;
+            }
+
+            try {
+                handler(partes.slice(1), argumentos);
+
+            } catch (erro) {
+                console.error(
+                    `[MTL] Erro na linha ${i + 1}:`,
+                    linha,
+                    erro
+                );
+
+                throw erro;
+            }
+        }
+
+        return materiais;
+    },
+
+    // Carrega os arquivos MTL associados a um OBJ.
+    async carregarMateriais(obj) {
+        const baseHref = new URL(
+            obj.caminho,
+            window.location.href
+        );
+
+        const arquivosMTL = await Promise.all(
+            obj.materialLibs.map(async nomeArquivo => {
+
+                const caminhoMTL = new URL(
+                    `../modelosMTL/${nomeArquivo}`,
+                    baseHref
+                );
+
+                try {
+                    const resposta = await fetch(caminhoMTL);
+
+                    if (!resposta.ok) {
+                        console.warn(
+                            `[MTL] Arquivo não encontrado: ${nomeArquivo}`
+                        );
+
+                        return null;
+                    }
+
+                    return {
+                        texto: await resposta.text(),
+                        caminho: caminhoMTL
+                    };
+
+                } catch (erro) {
+                    console.error(
+                        `[MTL] Erro ao carregar ${nomeArquivo}:`,
+                        erro
+                    );
+
+                    return null;
+                }
+            })
+        );
+
+        const arquivosValidos =
+            arquivosMTL.filter(Boolean);
+
+        const materiais = {};
+
+        // Interpreta cada biblioteca separadamente.
+        for (const arquivo of arquivosValidos) {
+            const materiaisArquivo =
+                this.parseMTL(arquivo.texto);
+
+            Object.assign(
+                materiais,
+                materiaisArquivo
+            );
+        }
+
+        return {
+            materiais,
+
+            caminhosMTL: arquivosValidos.map(
+                arquivo => arquivo.caminho
+            )
+        };
+    }
 };

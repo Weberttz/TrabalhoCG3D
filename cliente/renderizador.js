@@ -8,6 +8,7 @@ const caminhosTexturas = {
   "ceiling-lamp.obj": "/texturas/ceiling-lamp_body_basecolor.jpg",
   "radio.obj": "/texturas/radio_textura.jpg",
   "lousa.obj": "/texturas/lousa_textura.jpg",
+  "cadeira-aula.obj": "/texturas/Image_0.001.jpg",
 };
 
 const ESCALA_V_RADIO = 15.9874773;
@@ -64,6 +65,8 @@ in vec3 vDirecaoCamera;
 
 uniform sampler2D uTextura;
 uniform sampler2D uMapaEspecular;
+uniform sampler2D uMapaEmissivo;
+uniform bool uUsarMapaEmissivo;
 
 uniform bool uUsarTextura;
 uniform bool uUsarMapaEspecular;
@@ -133,7 +136,13 @@ void main() {
         * atenuacao;
     }
     // Cor emissiva
-    resultado += uCorEmissiva;
+    vec3 emissao = uCorEmissiva;
+
+    if (uUsarMapaEmissivo) {
+        emissao += texture(uMapaEmissivo, vTextura).rgb;
+    }
+
+    resultado += emissao;
 
     corFinal = vec4(resultado, 1.0);
 }
@@ -331,24 +340,12 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
   const uniformeCorEspecular = gl.getUniformLocation(programa, "uCorEspecular");
   const uniformeCorEmissiva = gl.getUniformLocation(programa, "uCorEmissiva");
   const uniformeBrilho = gl.getUniformLocation(programa, "uBrilho");
-  const uniformeMapaEspecular = gl.getUniformLocation(
-    programa,
-    "uMapaEspecular"
-  );
-  const uniformeUsarMapaEspecular = gl.getUniformLocation(
-    programa,
-    "uUsarMapaEspecular"
-  );
-  const uniformeEscalaUV = gl.getUniformLocation(
-    programa,
-    "uEscalaUV"
-  );
-
-  const uniformeDeslocamentoUV = gl.getUniformLocation(
-    programa,
-    "uDeslocamentoUV"
-  );
-
+  const uniformeMapaEspecular = gl.getUniformLocation(programa, "uMapaEspecular");
+  const uniformeUsarMapaEspecular = gl.getUniformLocation(programa, "uUsarMapaEspecular");
+  const uniformeEscalaUV = gl.getUniformLocation(programa, "uEscalaUV");
+  const uniformeDeslocamentoUV = gl.getUniformLocation(programa, "uDeslocamentoUV");
+  const uniformeMapaEmissivo = gl.getUniformLocation(programa, "uMapaEmissivo");
+  const uniformeUsarMapaEmissivo = gl.getUniformLocation(programa, "uUsarMapaEmissivo");
   const cubo = new Mesh(gl, verticesCubo(), null, null);
 
   const malhasOBJ = {};
@@ -425,6 +422,23 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
       mapaEspecular != null && malha.texCoordBuffer != null
     );
 
+    const mapaEmissivo = material?.emissiveMap ?? null;
+
+    gl.activeTexture(gl.TEXTURE2);
+
+    gl.bindTexture(
+      gl.TEXTURE_2D,
+      mapaEmissivo
+    );
+
+    gl.uniform1i(uniformeMapaEmissivo, 2);
+
+    gl.uniform1i(
+      uniformeUsarMapaEmissivo,
+      mapaEmissivo != null &&
+      malha.texCoordBuffer != null
+    );
+
     malha.desenhar(localAtributos);
   }
 
@@ -477,50 +491,45 @@ export function criarRenderizador(canvas, modelos, personagemGLB = null) {
 
     if (!caminhoMTL) return;
 
-    const cacheTexturas = {};
+    const cacheTexturas = new Map();
 
-    const materiais = Object.values(
-      modelo.materiais ?? {}
-    );
+    const propriedades = [
+      ['diffuseMap', 'uvTransform'],
+      ['specularMap', 'specularUVTransform'],
+      ['emissiveMap', 'emissiveUVTransform'],
+      ['normalMap', 'normalUVTransform']
+    ];
 
-    for (const material of materiais) {
-      for (const propriedade of [
-        "diffuseMap",
-        "specularMap"
-      ]) {
+    for (const material of Object.values(modelo.materiais ?? {})) {
+      for (const [propriedade, campoUV] of propriedades) {
         const arquivo = material[propriedade];
 
         if (!arquivo) continue;
 
-        // Repete a imagem quando o mapa difuso
-        // possui transformação UV própria.
-        const repetir =
-          propriedade === "diffuseMap" &&
-          material.uvTransform != null;
+        const repetir = material[campoUV] != null;
 
-        const chaveCache = `${arquivo}:${repetir}`;
+        const caminhoTextura = new URL(
+          `../texturas/${arquivo}`,
+          caminhoMTL
+        );
 
-        let textura = cacheTexturas[chaveCache];
+        const chave = `${caminhoTextura.href}:${repetir}`;
 
-        if (!textura) {
-          const caminhoTextura = new URL(
-            `../texturas/${arquivo}`,
-            caminhoMTL
-          );
-
-          textura = carregarTextura(
+        if (!cacheTexturas.has(chave)) {
+          const textura = carregarTextura(
             gl,
             caminhoTextura.href,
             repetir
           );
 
-          cacheTexturas[chaveCache] = textura;
+          cacheTexturas.set(chave, textura);
         }
 
-        material[propriedade] = textura;
+        material[propriedade] = cacheTexturas.get(chave);
       }
     }
   }
+
 
   for (const modelo of Object.values(modelos)) {
     carregarTexturasMateriais(gl, modelo);
